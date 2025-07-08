@@ -1,5 +1,5 @@
 import { useEvent } from 'expo';
-import ExpoKeywordBasedRecognizer, { ExpoKeywordBasedRecognizerView } from 'expo-keyword-based-recognizer';
+import ExpoKeywordBasedRecognizer from 'expo-keyword-based-recognizer';
 import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 export default function App() {
@@ -25,13 +25,6 @@ export default function App() {
         </Group>
         <Group name="Events">
           <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <ExpoKeywordBasedRecognizerView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
         </Group>
       </ScrollView>
     </SafeAreaView>

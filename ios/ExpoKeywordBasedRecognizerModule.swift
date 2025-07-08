@@ -27,22 +27,11 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     // is by default dispatched on the different thread than the JavaScript runtime runs on.
     AsyncFunction("setValueAsync") { (value: String) in
       // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoKeywordBasedRecognizerView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ExpoKeywordBasedRecognizerView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
-        }
-      }
-
-      Events("onLoad")
+      self.sendEvent(
+        "onChange",
+        [
+          "value": value
+        ])
     }
   }
 }
