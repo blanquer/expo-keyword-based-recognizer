@@ -14,10 +14,6 @@ class ExpoKeywordBasedRecognizerModule : Module() {
     // The module will be accessible from `requireNativeModule('ExpoKeywordBasedRecognizer')` in JavaScript.
     Name("ExpoKeywordBasedRecognizer")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
 
     // Defines event names that the module can send to JavaScript.
     Events("onChange")
