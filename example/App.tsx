@@ -65,7 +65,7 @@ export default function App() {
         keyword: KEYWORD,
         language: "en-US",
         confidenceThreshold: 0.7,
-        maxSilenceDuration: 4000,
+        maxSilenceDuration: 1500,
         soundEnabled: true,
         interimResults: true,
         contextualHints: [

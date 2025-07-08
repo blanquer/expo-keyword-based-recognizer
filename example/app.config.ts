@@ -1,5 +1,7 @@
-{
-  "expo": {
+import 'ts-node/register'; // Add this to import TypeScript files
+import { ExpoConfig } from 'expo/config';
+
+const config: ExpoConfig = {
     "name": "expo-keyword-based-recognizer-example",
     "slug": "expo-keyword-based-recognizer-example",
     "version": "1.0.0",
@@ -14,7 +16,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.keywordbasedrecognizer.example"
+      "bundleIdentifier": "expo.modules.keywordbasedrecognizer.example",
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +29,13 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-     "plugins": ["../app.plugin.js"]
-  }
-}
+     "plugins":[ [
+      "../app.plugin.js",
+      { microphonePermission: "Mic please!",
+        speechRecognitionPermission: "Speech please!",
+      }
+    ]
+  ]
+};
+
+export default config;

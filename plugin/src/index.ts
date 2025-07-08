@@ -1,12 +1,12 @@
 
-import { ConfigPlugin, createRunOncePlugin } from 'expo/config-plugins';
+import { ConfigPlugin } from 'expo/config-plugins';
 
 
 const withExpoKeywordBasedRecognizer: ConfigPlugin<{
  microphonePermission?: string;
  speechRecognitionPermission?: string;
  }|undefined> = (config, props) => {
-  console.log("withExpoKeywordBasedRecognizer called with props:", props);
+  // console.log("withExpoKeywordBasedRecognizer called with props:", props);
   if (!config.ios) {
     config.ios = {};
   }
@@ -28,11 +28,4 @@ const withExpoKeywordBasedRecognizer: ConfigPlugin<{
   return config;
 };
 
-// export default withExpoKeywordBasedRecognizer
-
-
-export default  createRunOncePlugin(
-  withExpoKeywordBasedRecognizer,
-  "expo-keyword-based-recognizer",
-  "1.0.0",
-);
+export default withExpoKeywordBasedRecognizer

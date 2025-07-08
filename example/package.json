@@ -9,7 +9,6 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@expo/config-plugins": "^10.1.2",
     "@expo/vector-icons": "^14.1.0",
     "expo": "~53.0.17",
     "react": "19.0.0",
@@ -18,7 +17,8 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "ts-node": "^10.9.2"
   },
   "private": true,
   "expo": {
