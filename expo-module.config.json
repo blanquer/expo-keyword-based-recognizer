@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoKeywordBasedRecognizerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.keywordbasedrecognizer.ExpoKeywordBasedRecognizerModule"]
+  }
+}

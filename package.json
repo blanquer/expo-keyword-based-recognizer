@@ -1,0 +1,44 @@
+{
+  "name": "expo-keyword-based-recognizer",
+  "version": "0.1.0",
+  "description": "Speech recognizer that can be triggered by a custom keyword/phrase",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "expo-module build",
+    "clean": "expo-module clean",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "prepare": "expo-module prepare",
+    "prepublishOnly": "expo-module prepublishOnly",
+    "expo-module": "expo-module",
+    "open:ios": "xed example/ios",
+    "open:android": "open -a \"Android Studio\" example/android"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "expo-keyword-based-recognizer",
+    "ExpoKeywordBasedRecognizer"
+  ],
+  "repository": "https://github.com/blanquer",
+  "bugs": {
+    "url": "https://github.com/blanquer/issues"
+  },
+  "author": "Josep M. Blanquer <blanquer@gmail.com> (blanquer)",
+  "license": "MIT",
+  "homepage": "https://github.com/blanquer#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/react": "~19.0.0",
+    "expo-module-scripts": "^4.1.9",
+    "expo": "~53.0.0",
+    "react-native": "0.79.1"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
+}
