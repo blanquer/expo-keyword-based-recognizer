@@ -54,6 +54,9 @@ public class ExpoKeywordBasedRecognizerModule: Module {
       await self.deactivate()
     }
 
+    AsyncFunction("requestPermissionsAsync") {
+      return try await self.requestPermissions()
+    }
   }
 
   private func activate(options: [String: Any]) async throws {
@@ -103,6 +106,28 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     updateState(.idle)
   }
 
+  private func requestPermissions() async throws -> [String: Any] {
+    let speechStatus = await withCheckedContinuation { continuation in
+      SFSpeechRecognizer.requestAuthorization { status in
+        continuation.resume(returning: status)
+      }
+    }
+
+    let microphoneStatus = await withCheckedContinuation { continuation in
+      AVAudioSession.sharedInstance().requestRecordPermission { granted in
+        continuation.resume(returning: granted)
+      }
+    }
+
+    let granted = speechStatus == .authorized && microphoneStatus
+    let status = granted ? "granted" : (speechStatus == .denied ? "denied" : "undetermined")
+
+    return [
+      "status": status,
+      "granted": granted,
+      "canAskAgain": speechStatus != .denied,
+    ]
+  }
   private func updateState(_ newState: RecognizerState) {
     // print("🟡 NATIVE DEBUG: updateState called - changing from \(state.rawValue) to \(newState.rawValue)")
     state = newState

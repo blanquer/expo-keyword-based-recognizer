@@ -2,7 +2,7 @@ import { useEvent } from 'expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ExpoKeywordBasedRecognizer, { KeywordDetectionEvent, KeywordRecognizerState, KeywordRecognizerStateEnum, RecognitionResult } from 'expo-keyword-based-recognizer';
 import React, { ReactElement, useEffect, useState } from 'react';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Alert, Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 export default function App() {
   const KEYWORD = "Hey Chef"
@@ -38,6 +38,21 @@ export default function App() {
     };
   }, []);
 
+
+  const requestPermissions = async () => {
+    try {
+      const permissions =
+        await ExpoKeywordBasedRecognizer.requestPermissionsAsync();
+      Alert.alert(
+        "Permission Request Result",
+        `Speech Recognition: ${permissions.status}\\n` +
+          `Granted: ${permissions.granted ? "Yes" : "No"}\\n` +
+          `Can Ask Again: ${permissions.canAskAgain ? "Yes" : "No"}`
+      );
+    } catch (error: any) {
+      Alert.alert("Permission Error", error.message);
+    }
+  };
 
   const startListening = async () => {
     try {
@@ -161,6 +176,10 @@ export default function App() {
         <Button
           title={ "Cancel"}
           onPress={cancelListening}
+        />
+        <Button
+          title={ "Request Permissions"}
+          onPress={requestPermissions}
         />
         </Group>
 
