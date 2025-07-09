@@ -10,7 +10,7 @@ public struct RecognitionResult {
 
 public class ExpoKeywordBasedRecognizerModule: Module {
 
-  private var recognizer: KeywordRecognizer?
+  private var recognizer: ExpoKeywordBasedRecognizer?
   private var state: RecognizerState = .idle
 
   // Each module class must implement the definition function. The definition consists of components
@@ -82,7 +82,7 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     }
 
     print("🔴 NATIVE DEBUG: Creating KeywordRecognizer...")
-    recognizer = KeywordRecognizer(
+    recognizer = ExpoKeywordBasedRecognizer(
       keyword: keyword,
       language: language,
       maxSilenceDuration: maxSilenceDuration,
@@ -159,7 +159,7 @@ public class ExpoKeywordBasedRecognizerModule: Module {
   }
 }
 
-extension ExpoKeywordBasedRecognizerModule: KeywordRecognizerDelegate {
+extension ExpoKeywordBasedRecognizerModule: ExpoKeywordBasedRecognizerDelegate {
   func keywordDetected(keyword: String) {
     updateState(.recognizingSpeech)
     print("🟢 NATIVE DEBUG: ----------------------------------------Keyword detected: '\(keyword)'")
@@ -217,7 +217,7 @@ enum RecognizerError: Error {
 }
 
 // MARK: - Delegate Protocol
-protocol KeywordRecognizerDelegate: AnyObject {
+protocol ExpoKeywordBasedRecognizerDelegate: AnyObject {
   func keywordDetected(keyword: String)
   func recognitionStarted()
   func recognitionResult(_ result: RecognitionResult)

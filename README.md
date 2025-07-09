@@ -33,3 +33,18 @@ Run `npx pod-install` after installing the npm package.
 # Contributing
 
 Contributions are very welcome! Please refer to guidelines described in the [contributing guide]( https://github.com/expo/expo#contributing).
+
+
+# NOTES FROM JOSEP
+
+Always ensure the build types are up to date by running this from the root:
+
+npm run build plugin
+
+(and kill it)
+
+then, to test the example app:
+cd example
+npx expo prebuild --clean -p ios (for iOS for example)
+xed ios
+Compile/run the project in Xcode

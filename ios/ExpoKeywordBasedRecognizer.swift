@@ -2,8 +2,8 @@ import AVFoundation
 import Foundation
 import Speech
 
-class KeywordRecognizer: NSObject {
-  weak var delegate: KeywordRecognizerDelegate?
+class ExpoKeywordBasedRecognizer: NSObject {
+  weak var delegate: ExpoKeywordBasedRecognizerDelegate?
 
   private let keyword: String?
   private let language: String
