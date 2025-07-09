@@ -65,6 +65,11 @@ export interface PermissionResponse {
   granted: boolean;
 }
 
+export interface Language {
+  code: string;
+  name: string;
+}
+
 // export interface KeywordBasedRecognizerNativeEventMap {
 //   keywordDetected: KeywordDetectionEvent;
 //   recognitionStart: null;

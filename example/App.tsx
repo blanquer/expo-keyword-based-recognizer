@@ -3,11 +3,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import ExpoKeywordBasedRecognizer, { KeywordDetectionEvent, KeywordRecognizerState, KeywordRecognizerStateEnum, RecognitionResult } from 'expo-keyword-based-recognizer';
 import React, { ReactElement, useEffect, useState } from 'react';
 import { Alert, Button, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import LanguageSelector from './LanguageSelector';
 
 export default function App() {
   const [keyword, setKeyword] = useState<string>("Hey Chef");
   const [keywordEnabled, setKeywordEnabled] = useState<boolean>(true);
   const [silenceDelay, setSilenceDelay] = useState<number>(1500);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("en-US");
   // console.log("🔴 DEBUG: App component loaded");
   const onChangePayload = useEvent(ExpoKeywordBasedRecognizer, 'onChange'); // DELETE ... from orig module
   const listeningState = useEvent(ExpoKeywordBasedRecognizer, 'onStateChange', {state:KeywordRecognizerStateEnum.IDLE});
@@ -65,7 +67,7 @@ export default function App() {
 
       const options = {
         keyword: keywordEnabled ? keyword : null,
-        language: "en-US",
+        language: selectedLanguage,
         confidenceThreshold: 0.7,
         maxSilenceDuration: silenceDelay,
         soundEnabled: true,
@@ -160,6 +162,10 @@ export default function App() {
               />
             </View>
           </View>
+          <LanguageSelector
+            value={selectedLanguage}
+            onValueChange={setSelectedLanguage}
+          />
           <View>
             <Text style={{ marginBottom: 5 }}>Silence Delay (ms):</Text>
             <TextInput

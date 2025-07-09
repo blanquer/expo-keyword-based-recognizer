@@ -57,6 +57,10 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     AsyncFunction("requestPermissionsAsync") {
       return try await self.requestPermissions()
     }
+
+    AsyncFunction("getAvailableLanguages") {
+      return self.getAvailableLanguages()
+    }
   }
 
   private func activate(options: [String: Any]) async throws {
@@ -138,6 +142,21 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     sendEvent("onStateChange", ["state": newState.rawValue])
     // print("🟡 NATIVE DEBUG: stateChange event sent")
   }
+
+  private func getAvailableLanguages() -> [[String: String]] {
+    // Get all available locales that support speech recognition
+    let availableLocales = SFSpeechRecognizer.supportedLocales()
+
+    // Map to language objects with code and name
+    let languages = availableLocales.map { locale in
+      return [
+        "code": locale.identifier,
+        "name": locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier,
+      ]
+    }.sorted { $0["name"]! < $1["name"]! }
+
+    return languages
+  }
 }
 
 extension ExpoKeywordBasedRecognizerModule: KeywordRecognizerDelegate {
@@ -170,6 +189,10 @@ extension ExpoKeywordBasedRecognizerModule: KeywordRecognizerDelegate {
 
   func recognitionError(_ error: Error) {
     print("🔴 NATIVE DEBUG: Recognition error occurred: \(error.localizedDescription)")
+    // I have seen an error here if the language is not supported for onDevice recognition (if we force it)
+    // It happened with Catalan for example
+    // KlsrErrordomain 101 - failed to load assets
+    // Might want to catch these cases better and report it properly
     sendEvent(
       "onError",
       [

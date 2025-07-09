@@ -1,6 +1,6 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ExpoKeywordBasedRecognizerModuleEvents, KeywordRecognizerOptions } from './ExpoKeywordBasedRecognizer.types';
+import { ExpoKeywordBasedRecognizerModuleEvents, KeywordRecognizerOptions, Language, PermissionResponse } from './ExpoKeywordBasedRecognizer.types';
 
 declare class ExpoKeywordBasedRecognizerModule extends NativeModule<ExpoKeywordBasedRecognizerModuleEvents> {
   // hello(): string;
@@ -11,8 +11,11 @@ declare class ExpoKeywordBasedRecognizerModule extends NativeModule<ExpoKeywordB
   deactivate(): Promise<void>;
 
   // Permission methods
-  // requestPermissionsAsync(): Promise<PermissionResponse>;
+  requestPermissionsAsync(): Promise<PermissionResponse>;
   // getPermissionsAsync(): Promise<PermissionResponse>;
+
+  // Language methods
+  getAvailableLanguages(): Promise<Language[]>;
 
   // // Event listeners
   // addListener<T extends keyof KeywordBasedRecognizerNativeEventMap>(

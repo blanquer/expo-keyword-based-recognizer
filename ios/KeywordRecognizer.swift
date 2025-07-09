@@ -51,6 +51,14 @@ class KeywordRecognizer: NSObject {
 
   private func setupSpeechRecognizer() {
     speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: language))
+    if speechRecognizer?.isAvailable == false {
+      // Note, when onDeviceRecognition is set to true, and it is really not available
+      // the isAvailable seems to still be true, but the recognitionTask will fail
+      print(
+        "!!!!!!!!!!!!!!!!!!!!!!RecognizerError.Recognizer not available for: \(language)"
+      )
+    }
+
     speechRecognizer?.defaultTaskHint = .dictation
   }
 
@@ -157,6 +165,9 @@ class KeywordRecognizer: NSObject {
       guard let self = self else { return }
 
       if let error = error {
+        // This can happen if the language is not supported ... cannot read assets or something
+        // TODO: Maybe there's a way to really detect the languages that are truly supported... even if it's forced to use onDeviceRecognition?
+        //  .. and bail earlier (and even only include those in the options for selection)
         self.delegate?.recognitionError(error)
         return
       }
