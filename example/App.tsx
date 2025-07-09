@@ -131,6 +131,9 @@ export default function App() {
       </View>
     )
   };
+  
+  const isListening = listeningState?.state !== KeywordRecognizerStateEnum.IDLE;
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.container}>
@@ -139,33 +142,32 @@ export default function App() {
           <View style={{ marginBottom: 10 }}>
             <Text style={{ marginBottom: 5 }}>Keyword:</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isListening && styles.inputDisabled]}
               value={keyword}
               onChangeText={setKeyword}
               placeholder="Enter keyword"
+              editable={!isListening}
             />
           </View>
           <View>
             <Text style={{ marginBottom: 5 }}>Silence Delay (ms):</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isListening && styles.inputDisabled]}
               value={silenceDelay.toString()}
               onChangeText={(text) => setSilenceDelay(parseInt(text) || 0)}
               placeholder="Enter silence delay"
               keyboardType="numeric"
+              editable={!isListening}
             />
           </View>
         </Group>
-        <Group name="Info">
+        <Group name="Detection">
           <View style={{ flexDirection: 'row' , alignItems: 'center',  alignContent: 'space-between', gap: 10 , width: '100%'}}>
             <Text>State: </Text>
             {listeningStateToComponent(listeningState)}
           </View>
-          
-        </Group>
-        <Group name={`Keyword Detection:`}>
           <View style={{ flexDirection: 'row' , alignItems: 'center',  alignContent: 'space-between', gap: 10 , width: '100%'}}>
-            <Text>"{keyword}"</Text>
+            <Text>Keyword detection</Text>
             { detectedKeyword && (
               <Ionicons name="checkmark-circle" size={22} color="green" />  
             )}
@@ -173,7 +175,6 @@ export default function App() {
               <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={'gray'}/>  
             )}
           </View>
-          
         </Group>
         <Group name="Recognition Result">
           <Text>{recognizedSentence || '---'}</Text>
@@ -184,7 +185,7 @@ export default function App() {
         {/* <Group name="Functions">
           <Text>{ExpoKeywordBasedRecognizer.hello()}</Text>
         </Group> */}
-        <Group name="Async functions">
+        <Group name="Actions">
           {/* <Button
             title="Set value"
             onPress={async () => {
@@ -226,10 +227,11 @@ const styles = {
   },
   groupHeader: {
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 10,
+    fontWeight: 'bold',
   },
   group: {
-    margin: 10,
+    margin: 8,
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 10,
@@ -249,5 +251,9 @@ const styles = {
     padding: 10,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
+  },
+  inputDisabled: {
+    backgroundColor: '#e0e0e0',
+    color: '#666',
   },
 };
