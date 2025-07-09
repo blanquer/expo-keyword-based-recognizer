@@ -137,7 +137,7 @@ class KeywordRecognizer: NSObject {
     }
 
     recognitionRequest.shouldReportPartialResults = true
-    recognitionRequest.requiresOnDeviceRecognition = true
+    recognitionRequest.requiresOnDeviceRecognition = false  // Won't work if true for some languages...
 
     // Add contextual hints with keyword at the top
     if let keyword = keyword {
