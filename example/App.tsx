@@ -2,10 +2,11 @@ import { useEvent } from 'expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ExpoKeywordBasedRecognizer, { KeywordDetectionEvent, KeywordRecognizerState, KeywordRecognizerStateEnum, RecognitionResult } from 'expo-keyword-based-recognizer';
 import React, { ReactElement, useEffect, useState } from 'react';
-import { Alert, Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Alert, Button, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 
 export default function App() {
-  const KEYWORD = "Hey Chef"
+  const [keyword, setKeyword] = useState<string>("Hey Chef");
+  const [silenceDelay, setSilenceDelay] = useState<number>(1500);
   // console.log("🔴 DEBUG: App component loaded");
   const onChangePayload = useEvent(ExpoKeywordBasedRecognizer, 'onChange'); // DELETE ... from orig module
   const listeningState = useEvent(ExpoKeywordBasedRecognizer, 'onStateChange', null);
@@ -62,10 +63,10 @@ export default function App() {
       // setError(null);
 
       const options = {
-        keyword: KEYWORD,
+        keyword: keyword,
         language: "en-US",
         confidenceThreshold: 0.7,
-        maxSilenceDuration: 1500,
+        maxSilenceDuration: silenceDelay,
         soundEnabled: true,
         interimResults: true,
         contextualHints: [
@@ -134,6 +135,27 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.container}>
         <Text style={styles.header}>Keyword Recognition Example</Text>
+        <Group name="Configuration">
+          <View style={{ marginBottom: 10 }}>
+            <Text style={{ marginBottom: 5 }}>Keyword:</Text>
+            <TextInput
+              style={styles.input}
+              value={keyword}
+              onChangeText={setKeyword}
+              placeholder="Enter keyword"
+            />
+          </View>
+          <View>
+            <Text style={{ marginBottom: 5 }}>Silence Delay (ms):</Text>
+            <TextInput
+              style={styles.input}
+              value={silenceDelay.toString()}
+              onChangeText={(text) => setSilenceDelay(parseInt(text) || 0)}
+              placeholder="Enter silence delay"
+              keyboardType="numeric"
+            />
+          </View>
+        </Group>
         <Group name="Info">
           <View style={{ flexDirection: 'row' , alignItems: 'center',  alignContent: 'space-between', gap: 10 , width: '100%'}}>
             <Text>State: </Text>
@@ -143,7 +165,7 @@ export default function App() {
         </Group>
         <Group name={`Keyword Detection:`}>
           <View style={{ flexDirection: 'row' , alignItems: 'center',  alignContent: 'space-between', gap: 10 , width: '100%'}}>
-            <Text>"{KEYWORD}"</Text>
+            <Text>"{keyword}"</Text>
             { detectedKeyword && (
               <Ionicons name="checkmark-circle" size={22} color="green" />  
             )}
@@ -219,5 +241,13 @@ const styles = {
   view: {
     flex: 1,
     height: 200,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
   },
 };
