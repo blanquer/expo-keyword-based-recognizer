@@ -62,18 +62,18 @@ public class ExpoKeywordBasedRecognizerModule: Module {
   private func activate(options: [String: Any]) async throws {
     print("🔴 NATIVE DEBUG: activate() called with options: \(options)")
 
-    let keyword = options["keyword"] as? String ?? ""
+    let keyword: String? = options["keyword"] as? String
     let language = options["language"] as? String ?? "en-US"
     let maxSilenceDuration = (options["maxSilenceDuration"] as? Double ?? 2000) / 1000.0
     let soundEnabled = options["soundEnabled"] as? Bool ?? true
     let soundUri = options["soundUri"] as? String
-    let interimResults = options["interimResults"] as? Bool ?? false
     let contextualHints = options["contextualHints"] as? [String] ?? []
 
-    print("🔴 NATIVE DEBUG: Parsed - keyword: '\(keyword)', language: '\(language)'")
+    let keywordToDisplay = keyword ?? "nil"
+    print("🔴 NATIVE DEBUG: Parsed - keyword: '\(keywordToDisplay)', language: '\(language)'")
 
-    if keyword.isEmpty {
-      print("🔴 NATIVE DEBUG: ERROR - keyword is empty")
+    if keyword != nil && keyword!.isEmpty {
+      print("🔴 NATIVE DEBUG: ERROR - keyword is empty (and not nil)")
       throw RecognizerError.invalidKeyword
     }
 
@@ -84,7 +84,6 @@ public class ExpoKeywordBasedRecognizerModule: Module {
       maxSilenceDuration: maxSilenceDuration,
       soundEnabled: soundEnabled,
       soundUri: soundUri,
-      interimResults: interimResults,
       contextualHints: contextualHints
     )
 
@@ -94,8 +93,12 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     print("🔴 NATIVE DEBUG: Starting recognizer...")
     try await recognizer?.start()
 
-    print("🔴 NATIVE DEBUG: Updating state to listeningForKeyword...")
-    updateState(.listeningForKeyword)
+    print("🔴 NATIVE DEBUG: Updating state based on keyword presence...")
+    if keyword != nil {
+      updateState(.listeningForKeyword)
+    } else {
+      updateState(.recognizingSpeech)
+    }
 
     print("🔴 NATIVE DEBUG: activate() completed successfully")
   }

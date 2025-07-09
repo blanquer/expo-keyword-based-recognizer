@@ -32,7 +32,7 @@ export interface KeywordRecognizerState {
   state: KeywordRecognizerStateEnum
 }
 export interface KeywordRecognizerOptions {
-  keyword: string;
+  keyword: string | null;
   language?: string;
   maxSilenceDuration?: number;
   soundEnabled?: boolean;

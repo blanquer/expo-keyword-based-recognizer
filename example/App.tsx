@@ -2,14 +2,15 @@ import { useEvent } from 'expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ExpoKeywordBasedRecognizer, { KeywordDetectionEvent, KeywordRecognizerState, KeywordRecognizerStateEnum, RecognitionResult } from 'expo-keyword-based-recognizer';
 import React, { ReactElement, useEffect, useState } from 'react';
-import { Alert, Button, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Button, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
 export default function App() {
   const [keyword, setKeyword] = useState<string>("Hey Chef");
+  const [keywordEnabled, setKeywordEnabled] = useState<boolean>(true);
   const [silenceDelay, setSilenceDelay] = useState<number>(1500);
   // console.log("🔴 DEBUG: App component loaded");
   const onChangePayload = useEvent(ExpoKeywordBasedRecognizer, 'onChange'); // DELETE ... from orig module
-  const listeningState = useEvent(ExpoKeywordBasedRecognizer, 'onStateChange', null);
+  const listeningState = useEvent(ExpoKeywordBasedRecognizer, 'onStateChange', {state:KeywordRecognizerStateEnum.IDLE});
   // const onRecognitionStart = useEvent(ExpoKeywordBasedRecognizer, 'onRecognitionStart');
   // const onKeywordDetectedPayload = useEvent(ExpoKeywordBasedRecognizer, 'onKeywordDetected',);
   // const onRecognitionResultPayload = useEvent(ExpoKeywordBasedRecognizer, 'onRecognitionResult');
@@ -63,7 +64,7 @@ export default function App() {
       // setError(null);
 
       const options = {
-        keyword: keyword,
+        keyword: keywordEnabled ? keyword : null,
         language: "en-US",
         confidenceThreshold: 0.7,
         maxSilenceDuration: silenceDelay,
@@ -140,14 +141,24 @@ export default function App() {
         <Text style={styles.header}>Keyword Recognition Example</Text>
         <Group name="Configuration">
           <View style={{ marginBottom: 10 }}>
-            <Text style={{ marginBottom: 5 }}>Keyword:</Text>
-            <TextInput
-              style={[styles.input, isListening && styles.inputDisabled]}
-              value={keyword}
-              onChangeText={setKeyword}
-              placeholder="Enter keyword"
-              editable={!isListening}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text>Enable Keyword Detection:</Text>
+              <Switch
+                value={keywordEnabled}
+                onValueChange={setKeywordEnabled}
+                disabled={isListening}
+              />
+            </View>
+            <View>
+              <Text style={{ marginBottom: 5 }}>Keyword:</Text>
+              <TextInput
+                style={[styles.input, (!keywordEnabled || isListening) && styles.inputDisabled]}
+                value={keyword}
+                onChangeText={setKeyword}
+                placeholder="Enter keyword"
+                editable={keywordEnabled && !isListening}
+              />
+            </View>
           </View>
           <View>
             <Text style={{ marginBottom: 5 }}>Silence Delay (ms):</Text>
@@ -166,15 +177,17 @@ export default function App() {
             <Text>State: </Text>
             {listeningStateToComponent(listeningState)}
           </View>
-          <View style={{ flexDirection: 'row' , alignItems: 'center',  alignContent: 'space-between', gap: 10 , width: '100%'}}>
-            <Text>Keyword detection</Text>
-            { detectedKeyword && (
-              <Ionicons name="checkmark-circle" size={22} color="green" />  
-            )}
-            {!detectedKeyword && (
-              <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={'gray'}/>  
-            )}
-          </View>
+          {keywordEnabled && (
+            <View style={{ flexDirection: 'row' , alignItems: 'center',  alignContent: 'space-between', gap: 10 , width: '100%'}}>
+              <Text>Keyword detection</Text>
+              { detectedKeyword && (
+                <Ionicons name="checkmark-circle" size={22} color="green" />  
+              )}
+              {!detectedKeyword && (
+                <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={'gray'}/>  
+              )}
+            </View>
+          )}
         </Group>
         <Group name="Recognition Result">
           <Text>{recognizedSentence || '---'}</Text>
@@ -228,7 +241,7 @@ const styles = {
   groupHeader: {
     fontSize: 16,
     marginBottom: 10,
-    fontWeight: 'bold',
+    fontWeight: 'bold' as const,
   },
   group: {
     margin: 8,

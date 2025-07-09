@@ -5,13 +5,12 @@ import Speech
 class KeywordRecognizer: NSObject {
   weak var delegate: KeywordRecognizerDelegate?
 
-  private let keyword: String
+  private let keyword: String?
   private let language: String
   var maxSilenceDuration: TimeInterval
 
   private let soundEnabled: Bool
   private let soundUri: String?
-  private let interimResults: Bool
   private let contextualHints: [String]
 
   private var speechRecognizer: SFSpeechRecognizer?
@@ -29,21 +28,19 @@ class KeywordRecognizer: NSObject {
   private var meaningfulConfirmedResults: [SFSpeechRecognitionResult] = []
 
   init(
-    keyword: String,
+    keyword: String?,
     language: String,
     maxSilenceDuration: TimeInterval,
     soundEnabled: Bool,
     soundUri: String?,
-    interimResults: Bool,
     contextualHints: [String]
   ) {
 
-    self.keyword = keyword.lowercased()
+    self.keyword = keyword?.lowercased()
     self.language = language
     self.maxSilenceDuration = maxSilenceDuration
     self.soundEnabled = soundEnabled
     self.soundUri = soundUri
-    self.interimResults = interimResults
     self.contextualHints = contextualHints
 
     super.init()
@@ -66,10 +63,7 @@ class KeywordRecognizer: NSObject {
         audioPlayer?.prepareToPlay()
       } catch {
         print("Failed to load custom sound: \\(error)")
-        loadDefaultSound()
       }
-    } else {
-      loadDefaultSound()
     }
   }
 
@@ -90,7 +84,7 @@ class KeywordRecognizer: NSObject {
     try startAudioEngine()
 
     print("🟢 KeywordRecognizer: Audio engine started, starting keyword listening...")
-    startKeywordListening()
+    startListening()
 
     print("🟢 KeywordRecognizer: start() completed successfully")
   }
@@ -138,7 +132,11 @@ class KeywordRecognizer: NSObject {
     recognitionRequest.requiresOnDeviceRecognition = true
 
     // Add contextual hints with keyword at the top
-    recognitionRequest.contextualStrings = [keyword] + contextualHints
+    if let keyword = keyword {
+      recognitionRequest.contextualStrings = [keyword] + contextualHints
+    } else {
+      recognitionRequest.contextualStrings = contextualHints
+    }
 
     inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
       self.recognitionRequest?.append(buffer)
@@ -149,9 +147,10 @@ class KeywordRecognizer: NSObject {
     try audioEngine.start()
   }
 
-  private func startKeywordListening() {
-    isListeningForKeyword = true
-    isRecognizingSpeech = false
+  private func startListening() {
+    // Start directly with the speech if no keyword is specified
+    isListeningForKeyword = self.keyword != nil
+    isRecognizingSpeech = self.keyword == nil
 
     recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest!) {
       [weak self] result, error in
@@ -204,8 +203,14 @@ class KeywordRecognizer: NSObject {
     // print("🟢 KeywordRecognizer: Checking for keyword: [\(transcript)]")
 
     // Check if the transcript contains the keyword
-    if transcript.contains(keyword) {
-      print("🟢 KeywordRecognizer: KEYWORD FOUND!")
+    if let keyword = keyword {
+      if transcript.contains(keyword) {
+        print("🟢 KeywordRecognizer: KEYWORD FOUND!")
+        handleKeywordDetected()
+      }
+    } else {
+      // If no keyword is specified, immediately trigger speech recognition
+      print("🟢 KeywordRecognizer: No keyword specified, triggering recognition immediately")
       handleKeywordDetected()
     }
   }
@@ -224,7 +229,7 @@ class KeywordRecognizer: NSObject {
     }
 
     // Notify delegate
-    delegate?.keywordDetected(keyword: keyword)
+    delegate?.keywordDetected(keyword: keyword ?? "")
     delegate?.recognitionStarted()
   }
 
@@ -263,12 +268,14 @@ class KeywordRecognizer: NSObject {
       let firstResult: String =
         resultsToProcess.first?.bestTranscription.formattedString.lowercased() ?? ""
       // find the index of the keyword in the initial speech
-      if let keywordIndex: String.Index = firstResult.range(of: keyword)?.lowerBound {
+      if let keyword = keyword,
+        let keywordIndex: String.Index = firstResult.range(of: keyword)?.lowerBound
+      {
         // Extract the text after the keyword
         let startIndex: String.Index = firstResult.index(keywordIndex, offsetBy: keyword.count)
         firstPiece = String(firstResult[startIndex...])
       } else {
-        // If keyword not found, we can still use the initial speech as is
+        // If keyword not found or no keyword specified, use the initial speech as is
         firstPiece = firstResult
       }
       let rest = resultsToProcess.dropFirst().map {
