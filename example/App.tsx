@@ -8,7 +8,7 @@ import LanguageSelector from './LanguageSelector';
 export default function App() {
   const [keyword, setKeyword] = useState<string>("Hey Chef");
   const [keywordEnabled, setKeywordEnabled] = useState<boolean>(true);
-  const [silenceDelay, setSilenceDelay] = useState<number>(1500);
+  const [silenceDelay, setSilenceDelay] = useState<number>(2000);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("en-US");
   // console.log("🔴 DEBUG: App component loaded");
   const onChangePayload = useEvent(ExpoKeywordBasedRecognizer, 'onChange'); // DELETE ... from orig module

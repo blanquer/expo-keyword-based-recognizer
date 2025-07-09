@@ -1,3 +1,10 @@
+// STRATEGY:
+// while keyword, we can do non-continuous recognition
+// when we see it, save the "rest" (after keyword) in the buffer
+// and restart recognition in continuous mode, under the now "recognizing speech"
+// at this point, we keep going until the timeout ... and the result will have a LIST of results
+// which we need to concatenate, and add to the potential text in the buffer. That's the final result (and we can do that 
+// in the onend handler).
 import { EventEmitter } from 'expo';
 import { 
   ExpoKeywordBasedRecognizerModuleEvents, 
@@ -53,6 +60,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
   private silenceTimer: number | null = null;
   private keywordDetected = false;
   private transcriptBuffer = '';
+  private speechResults: string[] = []; // Store all speech recognition results
 
   constructor() {
     super();
@@ -81,8 +89,9 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
     }
 
     this.recognition = new SpeechRecognitionClass();
-    this.recognition.continuous = true;
-    this.recognition.interimResults = this.options?.interimResults ?? true;
+    // Set continuous mode based on current state
+    this.recognition.continuous = this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH;
+    this.recognition.interimResults = false; // No interim results needed
     this.recognition.lang = this.options?.language ?? 'en-US';
     this.recognition.maxAlternatives = 1;
 
@@ -93,113 +102,149 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
 
     this.recognition.onresult = (event: any) => {
       const results = event.results;
-      const lastResult = results[results.length - 1];
-      const transcript = lastResult[0].transcript.toLowerCase().trim();
       
-      console.log(`🟢 Web Speech: Received transcript: "${transcript}" (final: ${lastResult.isFinal})`);
+      console.log(`🟢 Web Speech: Received ${results.length} results`);
+      for (let i = 0; i < results.length; i++) {
+        console.log(` - ${i}: "${results[i][0].transcript}" (final: ${results[i].isFinal})`);
+      }
 
       if (this.currentState === KeywordRecognizerStateEnum.LISTENING_FOR_KEYWORD) {
-        this.handleKeywordDetection(transcript, lastResult.isFinal);
+        // For keyword detection, we only need the last result
+        const lastResult = results[results.length - 1];
+        const transcript = lastResult[0].transcript.toLowerCase().trim();
+        this.handleKeywordDetection(transcript);
       } else if (this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH) {
-        this.handleSpeechRecognition(transcript, lastResult.isFinal);
+        // For speech recognition, collect all final results
+        for (let i = 0; i < results.length; i++) {
+          if (results[i].isFinal) {
+            const transcript = results[i][0].transcript.trim();
+            this.speechResults.push(transcript);
+            console.log(`🟢 Web Speech: Added to speech results: "${transcript}"`);
+          }
+        }
       }
     };
 
     this.recognition.onerror = (event: any) => {
       console.error('🔴 Web Speech: Recognition error:', event.error);
+      console.error('🔴 Web Speech: Recognition error, existing results:', this.speechResults);
+      if( event.error === 'no-speech' && this.speechResults.length > 0) {
+        // Empty last result, but we have some speech results
+        console.log('🔴 Web Speech: No speech detected, but we have results ')
+        this.processFinalResults();
+      }else{
       this.emit('onError', new Error(`Speech recognition error: ${event.error}`));
+      }
     };
 
     this.recognition.onend = () => {
-      console.log('🟡 Web Speech: Recognition ended');
-      if (this.isActive && this.currentState !== KeywordRecognizerStateEnum.IDLE) {
-        // Restart recognition if we're still supposed to be active
-        setTimeout(() => {
-          if (this.isActive) {
-            this.startRecognition();
-          }
-        }, 100);
+      console.log(`🟡 Web Speech: Recognition ended for ${this.currentState}`, this.currentState, this.keywordDetected);
+      if( this.currentState === KeywordRecognizerStateEnum.LISTENING_FOR_KEYWORD && this.keywordDetected) {
+        // pickup the fact that we just finished detecting the keyword, therefor transition to recognizing speech
+        console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
+        this.startRecognition();
+        return
+      }
+
+      if (this.currentState === KeywordRecognizerStateEnum.LISTENING_FOR_KEYWORD) {
+        // For keyword detection, restart recognition if still active
+        if (this.isActive && !this.keywordDetected) {
+          setTimeout(() => {
+            if (this.isActive) {
+              this.startRecognition();
+            }
+          }, 100);
+        }
+      } else if (this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH) {
+        // For speech recognition, process final results
+        this.processFinalResults();
       }
     };
   }
 
-  private handleKeywordDetection(transcript: string, isFinal: boolean): void {
+  private handleKeywordDetection(transcript: string): void {
     const keyword = this.options?.keyword?.toLowerCase();
     
     if (!keyword) {
       // No keyword specified, immediately switch to speech recognition
       this.keywordDetected = true;
-      this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
-      this.emit('onKeywordDetected', { keyword: '' });
+      this.switchToSpeechRecognition('');
       return;
     }
 
     if (transcript.includes(keyword)) {
       console.log(`🟢 Web Speech: Keyword "${keyword}" detected!`);
       this.keywordDetected = true;
-      this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
-      this.emit('onKeywordDetected', { keyword });
       
-      // Extract text after keyword for speech recognition
+      // Extract text after keyword and save to buffer
       const keywordIndex = transcript.indexOf(keyword);
       const afterKeyword = transcript.substring(keywordIndex + keyword.length).trim();
-      if (afterKeyword) {
-        this.transcriptBuffer = afterKeyword;
-      }
+      
+      this.switchToSpeechRecognition(afterKeyword);
     }
   }
 
-  private handleSpeechRecognition(transcript: string, isFinal: boolean): void {
-    if (!this.keywordDetected) return;
-
-    // Clear silence timer on new speech
-    if (this.silenceTimer) {
-      clearTimeout(this.silenceTimer);
-      this.silenceTimer = null;
-    }
-
-    // Process the transcript
-    let processedText = transcript;
+  private switchToSpeechRecognition(initialText: string): void {
+    this.transcriptBuffer = initialText;
+    this.speechResults = [];
+    // this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
+    this.emit('onKeywordDetected', { keyword: this.options?.keyword || '' });
     
-    // If we have a keyword, try to extract text after it
-    if (this.options?.keyword) {
-      const keyword = this.options.keyword.toLowerCase();
-      const keywordIndex = transcript.indexOf(keyword);
-      if (keywordIndex >= 0) {
-        processedText = transcript.substring(keywordIndex + keyword.length).trim();
+    // Stop current recognition and restart in continuous mode
+    if (this.recognition) {
+      // Reset any existing silence timer
+      if (this.silenceTimer) {
+        clearTimeout(this.silenceTimer);
+        this.silenceTimer = null;
       }
+      this.recognition.stop();
+      // Recognition will restart in continuous mode via onend handler
     }
+  }
 
-    // Add buffered text from keyword detection
-    if (this.transcriptBuffer) {
-      processedText = this.transcriptBuffer + ' ' + processedText;
-      this.transcriptBuffer = '';
-    }
-
+  private processFinalResults(): void {
+    // Concatenate all speech results
+    const speechText = this.speechResults.join(' ').trim();
+    
+    // Combine with buffer text from keyword detection
+    const finalText = this.transcriptBuffer ? 
+      `${this.transcriptBuffer} ${speechText}`.trim() : 
+      speechText;
+    
+    console.log(`🟢 Web Speech: Final result - buffer: "${this.transcriptBuffer}", speech: "${speechText}", combined: "${finalText}"`);
+    
     const result: RecognitionResult = {
-      text: processedText.trim(),
-      isFinal
+      text: finalText,
+      isFinal: true
     };
 
     this.emit('onRecognitionResult', result);
-
-    if (isFinal) {
-      this.cleanup();
-    } else {
-      // Set silence timer for interim results
-      const silenceDelay = this.options?.maxSilenceDuration ?? 2000;
-      this.silenceTimer = window.setTimeout(() => {
-        console.log('🟡 Web Speech: Silence timeout reached');
-        this.cleanup();
-      }, silenceDelay);
-    }
+    this.cleanup();
   }
+
 
   private startRecognition(): void {
     if (!this.recognition) return;
     
+    // Update continuous mode based on current state
+    this.recognition.continuous = this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH;
+    
     try {
       this.recognition.start();
+      
+      // Set silence timer for speech recognition mode
+      if (this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH) {
+        console.log('🟢 Web Speech: Starting TIMER on StartRecognition');
+        // if we have somethin in the buffer already, we do normal silence delay, if we have nothing, we wait longer
+        const conditionalDelay = this.transcriptBuffer.length > 0 ? this.options?.maxSilenceDuration : 10000;
+        this.silenceTimer = window.setTimeout(() => {
+          console.log('🟡 Web Speech: Silence timeout reached');
+          if (this.recognition) {
+            this.recognition.stop();
+          }
+        }, conditionalDelay);
+      }
     } catch (error) {
       console.error('🔴 Web Speech: Error starting recognition:', error);
       // Recognition might already be running, ignore the error
@@ -209,6 +254,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
   private cleanup(): void {
     this.keywordDetected = false;
     this.transcriptBuffer = '';
+    this.speechResults = [];
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
@@ -229,14 +275,13 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
     this.isActive = true;
     this.keywordDetected = false;
     this.transcriptBuffer = '';
+    this.speechResults = [];
 
     // Check for empty keyword
     if (options.keyword !== null && options.keyword !== undefined && options.keyword.trim() === '') {
       throw new Error('Keyword cannot be empty');
     }
 
-    this.setupRecognition();
-    
     // Set initial state based on keyword presence
     if (options.keyword) {
       this.updateState(KeywordRecognizerStateEnum.LISTENING_FOR_KEYWORD);
@@ -244,6 +289,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
       this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
     }
     
+    this.setupRecognition();
     this.startRecognition();
   }
 
