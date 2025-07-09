@@ -114,7 +114,23 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
         const transcript = lastResult[0].transcript.toLowerCase().trim();
         this.handleKeywordDetection(transcript);
       } else if (this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH) {
+        // Restart silence timer 
+        if (this.silenceTimer) {
+          clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
+        }
+        const delay = this.options?.maxSilenceDuration;
+        console.log(`[${new Date().toISOString()}] 🟢 Web Speech: RESTARTING TIMER on speech received for `, delay);
+        this.silenceTimer = window.setTimeout(() => {
+          console.log(`[${new Date().toISOString()}] 🟡 Web Speech: Silence timeout reached`, delay);
+          if (this.recognition) {
+            this.recognition.stop();
+          }
+        }, delay);
+
+        // JOSEP: Should we not save anything? if it's continuous...I think we'll get the all at the end?
         // For speech recognition, collect all final results
+        this.speechResults = []; // Reset results for new recognition session
         for (let i = 0; i < results.length; i++) {
           if (results[i].isFinal) {
             const transcript = results[i][0].transcript.trim();
@@ -191,6 +207,11 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
     // this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
     this.emit('onKeywordDetected', { keyword: this.options?.keyword || '' });
     
+    // Play sound notification if enabled
+    if (this.options?.soundEnabled !== false) {
+      this.playNotificationSound();
+    }
+    
     // Stop current recognition and restart in continuous mode
     if (this.recognition) {
       // Reset any existing silence timer
@@ -201,6 +222,33 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
       this.recognition.stop();
       // Recognition will restart in continuous mode via onend handler
     }
+  }
+
+  private playNotificationSound(): void {
+    // Create and play a notification sound using Web Audio API (similar to iOS 1113)
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create oscillator for the main tone
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Configure the sound - higher pitch like iOS begin recording
+    oscillator.frequency.value = 1047; // C6 note
+    oscillator.type = 'sine';
+    
+    // Create envelope for the sound - quick attack, short duration
+    const now = audioContext.currentTime;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.4, now + 0.005); // Quick attack
+    gainNode.gain.linearRampToValueAtTime(0.35, now + 0.03); // Slight decay
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1); // Quick release
+    
+    // Play the sound
+    oscillator.start(now);
+    oscillator.stop(now + 0.1);
   }
 
   private processFinalResults(): void {
@@ -214,6 +262,11 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
     
     console.log(`🟢 Web Speech: Final result - buffer: "${this.transcriptBuffer}", speech: "${speechText}", combined: "${finalText}"`);
     
+    // Play completion sound if enabled
+    if (this.options?.soundEnabled !== false) {
+      this.playCompletionSound();
+    }
+    
     const result: RecognitionResult = {
       text: finalText,
       isFinal: true
@@ -221,6 +274,33 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
 
     this.emit('onRecognitionResult', result);
     this.cleanup();
+  }
+
+  private playCompletionSound(): void {
+    // Create and play a completion sound using Web Audio API (similar to iOS 1114)
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create oscillator for the main tone
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Configure the sound - lower frequency for completion like iOS end recording
+    oscillator.frequency.value = 523; // C5 note (octave lower than start)
+    oscillator.type = 'sine';
+    
+    // Create envelope for the sound - softer attack, slightly longer
+    const now = audioContext.currentTime;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Softer attack
+    gainNode.gain.linearRampToValueAtTime(0.25, now + 0.05); // Gentle sustain
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.12); // Smooth release
+    
+    // Play the sound
+    oscillator.start(now);
+    oscillator.stop(now + 0.12);
   }
 
 
@@ -235,11 +315,11 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
       
       // Set silence timer for speech recognition mode
       if (this.currentState === KeywordRecognizerStateEnum.RECOGNIZING_SPEECH) {
-        console.log('🟢 Web Speech: Starting TIMER on StartRecognition');
         // if we have somethin in the buffer already, we do normal silence delay, if we have nothing, we wait longer
         const conditionalDelay = this.transcriptBuffer.length > 0 ? this.options?.maxSilenceDuration : 10000;
+        console.log(`[${new Date().toISOString()}] 🟢 Web Speech: Starting TIMER on StartRecognition for `, conditionalDelay);
         this.silenceTimer = window.setTimeout(() => {
-          console.log('🟡 Web Speech: Silence timeout reached');
+            console.log(`[${new Date().toISOString()}] 🟡 Web Speech: Silence timeout reached`, conditionalDelay);
           if (this.recognition) {
             this.recognition.stop();
           }
