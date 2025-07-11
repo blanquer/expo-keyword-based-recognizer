@@ -38,10 +38,12 @@ Contributions are very welcome! Please refer to guidelines described in the [con
 # NOTES FROM JOSEP
 
 Always ensure the build types are up to date by running this from the root:
-
+# for the main module (output at <root>/build)
+npm run build 
+# for the plugin piece (output at <root>/plugin/build)
 npm run build plugin
 
-(and kill it)
+(and kill them)
 
 then, to test the example app:
 cd example

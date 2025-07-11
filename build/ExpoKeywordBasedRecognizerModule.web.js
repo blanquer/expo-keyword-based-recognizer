@@ -19,7 +19,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
     speechResults = []; // Store all speech recognition results
     constructor() {
         super();
-        this.checkBrowserSupport();
+        // Defer browser support check to avoid accessing window during module initialization
     }
     checkBrowserSupport() {
         if (!this.getSpeechRecognition()) {
@@ -27,6 +27,10 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
         }
     }
     getSpeechRecognition() {
+        // Check if we're in a browser environment before accessing window
+        if (typeof window === 'undefined') {
+            return null;
+        }
         return window.SpeechRecognition || window.webkitSpeechRecognition || null;
     }
     updateState(newState) {
@@ -263,6 +267,8 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
     // Public API methods
     async activate(options) {
         console.log('🔴 Web Speech: Activating with options:', options);
+        // Check browser support when actually using the module, and not building
+        this.checkBrowserSupport();
         this.options = options;
         this.isActive = true;
         this.keywordDetected = false;
