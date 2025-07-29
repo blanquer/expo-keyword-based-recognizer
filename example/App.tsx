@@ -142,6 +142,16 @@ export default function App() {
           onFlowCreated={(flow) => { mainFlowRef.current = flow; }} 
         />
 
+        {/* Secondary Flow Component */}
+        <FlowComponent 
+          flowName="Spanish Flow"
+          cardBackgroundColor="#fff5f5"
+          initialLanguage="es-ES"
+          initialKeyword=""
+          initialKeywordEnabled={false}
+          initialSilenceDelay={1500}
+        />
+
       </ScrollView>
     </SafeAreaView>
   );

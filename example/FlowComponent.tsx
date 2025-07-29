@@ -5,7 +5,7 @@ import SpeechRecognitionManager, {
   KeywordRecognizerStateEnum
 } from 'expo-keyword-based-recognizer';
 import React, { ReactElement, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Button, Switch, Text, TextInput, View, TouchableOpacity } from 'react-native';
 import LanguageSelector from './LanguageSelector';
 
 interface FlowComponentProps {
@@ -186,12 +186,27 @@ export default function FlowComponent({
     )
   };
   
-  const isListening = listeningState?.state !== KeywordRecognizerStateEnum.IDLE;
+  // Check if this specific flow is active AND currently listening/recognizing
+  const isThisFlowActive = (flowRef.current?.isActive || false) && 
+                          listeningState?.state !== KeywordRecognizerStateEnum.IDLE;
   
   return (
     <View style={[styles.card, { backgroundColor: cardBackgroundColor }]}>
-      {/* Flow Name Header */}
-      <Text style={styles.cardHeader}>{flowName}</Text>
+      {/* Flow Name Header with Action Button */}
+      <View style={styles.cardHeaderRow}>
+        <Text style={styles.cardHeader}>{flowName}</Text>
+        {!isThisFlowActive ? (
+          <TouchableOpacity style={styles.actionButton} onPress={startListening}>
+            <Ionicons name="play" size={16} color="#007AFF" />
+            <Text style={styles.actionButtonText}>Listen</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.actionButton} onPress={cancelListening}>
+            <Ionicons name="stop" size={16} color="#FF3B30" />
+            <Text style={[styles.actionButtonText, { color: '#FF3B30' }]}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       
       <Group>
         {/* Language selector first */}
@@ -207,11 +222,11 @@ export default function FlowComponent({
           <View style={{ flex: 2 }}>
             <Text style={{ marginBottom: 4, fontSize: 14 }}>Keyword:</Text>
             <TextInput
-              style={[styles.input, styles.inputCompact, (!keywordEnabled || isListening) && styles.inputDisabled]}
+              style={[styles.input, styles.inputCompact, (!keywordEnabled || isThisFlowActive) && styles.inputDisabled]}
               value={keyword}
               onChangeText={setKeyword}
               placeholder="Enter keyword"
-              editable={keywordEnabled && !isListening}
+              editable={keywordEnabled && !isThisFlowActive}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -219,7 +234,7 @@ export default function FlowComponent({
             <Switch
               value={keywordEnabled}
               onValueChange={setKeywordEnabled}
-              disabled={isListening}
+              disabled={isThisFlowActive}
             />
           </View>
         </View>
@@ -228,12 +243,12 @@ export default function FlowComponent({
         <View>
           <Text style={{ marginBottom: 4, fontSize: 14 }}>Silence Delay (ms):</Text>
           <TextInput
-            style={[styles.input, styles.inputCompact, isListening && styles.inputDisabled]}
+            style={[styles.input, styles.inputCompact, isThisFlowActive && styles.inputDisabled]}
             value={silenceDelay.toString()}
             onChangeText={(text) => setSilenceDelay(parseInt(text) || 0)}
             placeholder="Enter delay"
             keyboardType="numeric"
-            editable={!isListening}
+            editable={!isThisFlowActive}
           />
         </View>
       </Group>
@@ -280,23 +295,6 @@ export default function FlowComponent({
           </View>
         )}
       </Group>
-      
-      <Group compact>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Button
-              title={"Listen"}
-              onPress={startListening}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              title={"Cancel"}
-              onPress={cancelListening}
-            />
-          </View>
-        </View>
-      </Group>
     </View>
   );
 }
@@ -323,12 +321,35 @@ const styles = {
     shadowRadius: 4,
     elevation: 3,
   },
+  cardHeaderRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    marginBottom: 2,
+    marginRight: 10,
+    marginLeft: 10,
+  },
   cardHeader: {
     fontSize: 18,
     fontWeight: 'bold' as const,
-    marginBottom: 5,
-    textAlign: 'center' as const,
     color: '#333',
+    flex: 1,
+  },
+  actionButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  actionButtonText: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#007AFF',
   },
   groupHeader: {
     fontSize: 14,
