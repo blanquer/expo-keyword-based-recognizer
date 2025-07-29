@@ -82,7 +82,7 @@ export default function FlowComponent({
       // Show takeover notification
       setTakenOverBy(newFlowId);
       // Clear the takeover message after 3 seconds
-      setTimeout(() => setTakenOverBy(null), 3000);
+      // setTimeout(() => setTakenOverBy(null), 3000);
     });
     
     // Cleanup function
