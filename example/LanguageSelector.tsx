@@ -123,13 +123,13 @@ export default function LanguageSelector({ value, onValueChange }: LanguageSelec
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginVertical: 0,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   selector: {
     flexDirection: 'row',
@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: '#ddd',
   },
   selectorText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
   },
   arrow: {
