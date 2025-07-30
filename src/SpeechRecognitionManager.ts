@@ -34,12 +34,14 @@ export class SpeechRecognitionManager implements ISpeechRecognitionManager {
   private setupEventRouting(): void {
     // Set up centralized event routing based on flowId
     ExpoKeywordBasedRecognizerModule.addListener('onStateChange', (event: any) => {
-      const { flowId, ...data } = event;
-      this.currentState = data;
+      const { flowId, state } = event;
+      console.log('🟣 SpeechRecognitionManager: Received state change event:', event);
+      this.currentState = { state }; // Extract just the state
       
       if (flowId) {
         const callbacks = this.flowCallbacks.get(flowId)?.onStateChange || [];
-        callbacks.forEach(callback => callback(data));
+        console.log(`🟣 SpeechRecognitionManager: Routing to ${callbacks.length} callbacks for flowId: ${flowId}`);
+        callbacks.forEach(callback => callback({ state }));
       }
     });
 
@@ -175,17 +177,26 @@ export class SpeechRecognitionManager implements ISpeechRecognitionManager {
       }
     }
     
+    // Update flow state BEFORE activation so it's ready when events arrive
+    flow._setActive(true);
+    flow._setOptions(options);
+    this.activeFlow = flow;
+    
     // Activate the new flow
     const { onInterrupted, ...nativeOptions } = options;
     const activationOptions = {
       ...nativeOptions,
       flowId: flow.flowId
     };
-    await ExpoKeywordBasedRecognizerModule.activate(activationOptions);
     
-    // Update flow state
-    flow._setActive(true);
-    flow._setOptions(options);
-    this.activeFlow = flow;
+    try {
+      await ExpoKeywordBasedRecognizerModule.activate(activationOptions);
+    } catch (error) {
+      // If activation fails, reset the flow state
+      flow._setActive(false);
+      flow._setOptions(null);
+      this.activeFlow = null;
+      throw error;
+    }
   }
 }
