@@ -12,6 +12,7 @@ public class ExpoKeywordBasedRecognizerModule: Module {
 
   private var recognizer: ExpoKeywordBasedRecognizer?
   private var state: RecognizerState = .idle
+  private var currentFlowId: String?
 
   // Each module class must implement the definition function. The definition consists of components
   // that describes the module's functionality and behavior.
@@ -72,6 +73,10 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     let soundEnabled = options["soundEnabled"] as? Bool ?? true
     let soundUri = options["soundUri"] as? String
     let contextualHints = options["contextualHints"] as? [String] ?? []
+    let flowId = options["flowId"] as? String ?? "unknown"
+
+    // Store the current flow ID
+    currentFlowId = flowId
 
     let keywordToDisplay = keyword ?? "nil"
     print("🔴 NATIVE DEBUG: Parsed - keyword: '\(keywordToDisplay)', language: '\(language)'")
@@ -109,8 +114,9 @@ public class ExpoKeywordBasedRecognizerModule: Module {
 
   private func deactivate() async {
     await recognizer?.stop()
-    recognizer = nil
     updateState(.idle)
+    recognizer = nil
+    currentFlowId = nil
   }
 
   private func requestPermissions() async throws -> [String: Any] {
@@ -139,7 +145,12 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     // print("🟡 NATIVE DEBUG: updateState called - changing from \(state.rawValue) to \(newState.rawValue)")
     state = newState
     print("🟡 NATIVE DEBUG: Sending stateChange event to JavaScript...", newState.rawValue)
-    sendEvent("onStateChange", ["state": newState.rawValue])
+    print("🟡 NATIVE DEBUG: currentFlowId: \(String(describing: currentFlowId))")
+    var eventData: [String: Any] = ["state": newState.rawValue]
+    if let flowId = currentFlowId {
+      eventData["flowId"] = flowId
+    }
+    sendEvent("onStateChange", eventData)
     // print("🟡 NATIVE DEBUG: stateChange event sent")
   }
 
@@ -163,28 +174,37 @@ extension ExpoKeywordBasedRecognizerModule: ExpoKeywordBasedRecognizerDelegate {
   func keywordDetected(keyword: String) {
     updateState(.recognizingSpeech)
     print("🟢 NATIVE DEBUG: ----------------------------------------Keyword detected: '\(keyword)'")
-    sendEvent(
-      "onKeywordDetected",
-      [
-        "keyword": keyword,
-        "timestamp": Date().timeIntervalSince1970 * 1000,
-      ])
+
+    var eventData: [String: Any] = [
+      "keyword": keyword,
+      "timestamp": Date().timeIntervalSince1970 * 1000,
+    ]
+    if let flowId = currentFlowId {
+      eventData["flowId"] = flowId
+    }
+    sendEvent("onKeywordDetected", eventData)
   }
 
   func recognitionStarted() {
-    sendEvent("onRecognitionStart")
+    var eventData: [String: Any] = [:]
+    if let flowId = currentFlowId {
+      eventData["flowId"] = flowId
+    }
+    sendEvent("onRecognitionStart", eventData)
   }
 
   func recognitionResult(_ result: RecognitionResult) {
     print("🟢 NATIVE DEBUG: Setting to idle...")
     updateState(.idle)
-    sendEvent(
-      "onRecognitionResult",
-      [
-        "text": result.text,
-        "isFinal": result.isFinal,
-      ])
 
+    var eventData: [String: Any] = [
+      "text": result.text,
+      "isFinal": result.isFinal,
+    ]
+    if let flowId = currentFlowId {
+      eventData["flowId"] = flowId
+    }
+    sendEvent("onRecognitionResult", eventData)
   }
 
   func recognitionError(_ error: Error) {
@@ -193,12 +213,15 @@ extension ExpoKeywordBasedRecognizerModule: ExpoKeywordBasedRecognizerDelegate {
     // It happened with Catalan for example
     // KlsrErrordomain 101 - failed to load assets
     // Might want to catch these cases better and report it properly
-    sendEvent(
-      "onError",
-      [
-        "message": error.localizedDescription,
-        "code": (error as NSError).code,
-      ])
+
+    var eventData: [String: Any] = [
+      "message": error.localizedDescription,
+      "code": (error as NSError).code,
+    ]
+    if let flowId = currentFlowId {
+      eventData["flowId"] = flowId
+    }
+    sendEvent("onError", eventData)
   }
 }
 

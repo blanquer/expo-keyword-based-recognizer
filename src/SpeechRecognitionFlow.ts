@@ -1,4 +1,3 @@
-import { Subscription } from 'expo-modules-core';
 import ExpoKeywordBasedRecognizerModule from './ExpoKeywordBasedRecognizerModule';
 import { 
   SpeechRecognitionFlow as ISpeechRecognitionFlow, 
@@ -11,7 +10,6 @@ import {
 } from './ExpoKeywordBasedRecognizer.types';
 
 export class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
-  private subscriptions: Subscription[] = [];
   private _isActive = false;
   private _options: FlowActivationOptions | null = null;
   private manager: any; // Will be typed as SpeechRecognitionManager later
@@ -33,12 +31,8 @@ export class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
     await this.manager._activateFlow(this, options);
   }
 
-  // Deactivates the flow BUT it does not clean the subscriptions or unregister the flow...
   async deactivate(): Promise<void> {
     if (!this._isActive) return;
-    
-    // // Clean up all subscriptions
-    // this.cleanupSubscriptions();
     
     // Deactivate native module
     await ExpoKeywordBasedRecognizerModule.deactivate();
@@ -48,43 +42,19 @@ export class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
   }
 
   onStateChange(callback: (state: KeywordRecognizerState) => void): () => void {
-    const subscription = ExpoKeywordBasedRecognizerModule.addListener('onStateChange', callback);
-    this.subscriptions.push(subscription);
-    
-    return () => {
-      subscription.remove();
-      this.subscriptions = this.subscriptions.filter(s => s !== subscription);
-    };
+    return this.manager.registerCallback(this.flowId, 'onStateChange', callback);
   }
 
   onKeywordDetected(callback: (event: KeywordDetectionEvent) => void): () => void {
-    const subscription = ExpoKeywordBasedRecognizerModule.addListener('onKeywordDetected', callback);
-    this.subscriptions.push(subscription);
-    
-    return () => {
-      subscription.remove();
-      this.subscriptions = this.subscriptions.filter(s => s !== subscription);
-    };
+    return this.manager.registerCallback(this.flowId, 'onKeywordDetected', callback);
   }
 
   onRecognitionResult(callback: (result: RecognitionResult) => void): () => void {
-    const subscription = ExpoKeywordBasedRecognizerModule.addListener('onRecognitionResult', callback);
-    this.subscriptions.push(subscription);
-    
-    return () => {
-      subscription.remove();
-      this.subscriptions = this.subscriptions.filter(s => s !== subscription);
-    };
+    return this.manager.registerCallback(this.flowId, 'onRecognitionResult', callback);
   }
 
   onError(callback: (error: Error) => void): () => void {
-    const subscription = ExpoKeywordBasedRecognizerModule.addListener('onError', callback);
-    this.subscriptions.push(subscription);
-    
-    return () => {
-      subscription.remove();
-      this.subscriptions = this.subscriptions.filter(s => s !== subscription);
-    };
+    return this.manager.registerCallback(this.flowId, 'onError', callback);
   }
 
   onTakenOver(callback: (newFlowId: string) => void): () => void {
@@ -108,10 +78,6 @@ export class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
     this._options = options;
   }
 
-  cleanupSubscriptions(): void {
-    this.subscriptions.forEach(subscription => subscription.remove());
-    this.subscriptions = [];
-  }
 
   // Internal method to notify this flow it was taken over
   _notifyTakenOver(newFlowId: string): void {
