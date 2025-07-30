@@ -12,6 +12,10 @@ export * from './SpeechRecognitionTypes';
 export { SpeechRecognitionManager } from './SpeechRecognitionManager';
 export { SpeechRecognitionFlow } from './SpeechRecognitionFlow';
 
+// Export the hook
+export { useSpeechRecognizerFlow } from './useSpeechRecognizerFlow';
+export type { UseSpeechRecognizerFlowOptions, UseSpeechRecognizerFlowReturn } from './useSpeechRecognizerFlow';
+
 // Legacy exports for backward compatibility
 export const ExpoKeywordBasedRecognizer = ExpoKeywordBasedRecognizerModule;
 export const getAvailableLanguages = ExpoKeywordBasedRecognizerModule.getAvailableLanguages;

@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, Text, View, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FlowComponent from './FlowComponent';
+import FlowComponentHook from './FlowComponentHook';
 
 export default function App() {
   // Using refs to maintain flow instances
@@ -76,8 +77,8 @@ export default function App() {
           onFlowCreated={(flow) => { mainFlowRef.current = flow; }} 
         />
 
-        {/* Secondary Flow Component */}
-        <FlowComponent 
+        {/* Secondary Flow Component using the new hook */}
+        <FlowComponentHook 
           flowName="Spanish Flow"
           cardBackgroundColor="#fff5f5"
           initialLanguage="es-ES"
