@@ -5,7 +5,7 @@ export type ExpoKeywordBasedRecognizerModuleEvents = {
     onChange: (params: ChangeEventPayload) => void;
     onStateChange: (state: KeywordRecognizerState) => void;
     onKeywordDetected: (event: KeywordDetectionEvent) => void;
-    onRecognitionStart: () => void;
+    onRecognitionStart: (data?: any) => void;
     onRecognitionResult: (result: RecognitionResult) => void;
     onError: (error: Error) => void;
 };

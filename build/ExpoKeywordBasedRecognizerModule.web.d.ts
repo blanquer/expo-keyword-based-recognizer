@@ -40,6 +40,7 @@ declare class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordB
     private keywordDetected;
     private transcriptBuffer;
     private speechResults;
+    private currentFlowId;
     constructor();
     private checkBrowserSupport;
     private getSpeechRecognition;
@@ -52,7 +53,9 @@ declare class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordB
     private playCompletionSound;
     private startRecognition;
     private cleanup;
-    activate(options: KeywordRecognizerOptions): Promise<void>;
+    activate(options: KeywordRecognizerOptions & {
+        flowId?: string;
+    }): Promise<void>;
     deactivate(): Promise<void>;
     requestPermissionsAsync(): Promise<PermissionResponse>;
     getAvailableLanguages(): Promise<Language[]>;

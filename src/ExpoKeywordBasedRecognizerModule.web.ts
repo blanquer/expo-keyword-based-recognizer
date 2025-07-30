@@ -11,7 +11,6 @@ import {
   KeywordRecognizerOptions, 
   Language, 
   PermissionResponse,
-  RecognitionResult,
   KeywordRecognizerStateEnum
 } from './ExpoKeywordBasedRecognizer.types';
 

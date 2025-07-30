@@ -17,6 +17,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
     keywordDetected = false;
     transcriptBuffer = '';
     speechResults = []; // Store all speech recognition results
+    currentFlowId = null; // Track current flow ID
     constructor() {
         super();
         // Defer browser support check to avoid accessing window during module initialization
@@ -35,7 +36,12 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
     }
     updateState(newState) {
         this.currentState = newState;
-        this.emit('onStateChange', { state: newState });
+        console.log(`🟡 Web Speech: Updating state to ${newState}, flowId: ${this.currentFlowId}`);
+        const eventData = { state: newState };
+        if (this.currentFlowId) {
+            eventData.flowId = this.currentFlowId;
+        }
+        this.emit('onStateChange', eventData);
     }
     setupRecognition() {
         const SpeechRecognitionClass = this.getSpeechRecognition();
@@ -50,7 +56,11 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
         this.recognition.maxAlternatives = 1;
         this.recognition.onstart = () => {
             console.log('🟢 Web Speech: Recognition started');
-            this.emit('onRecognitionStart');
+            const eventData = {};
+            if (this.currentFlowId) {
+                eventData.flowId = this.currentFlowId;
+            }
+            this.emit('onRecognitionStart', eventData);
         };
         this.recognition.onresult = (event) => {
             const results = event.results;
@@ -99,7 +109,14 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
                 this.processFinalResults();
             }
             else {
-                this.emit('onError', new Error(`Speech recognition error: ${event.error}`));
+                const eventData = {
+                    message: `Speech recognition error: ${event.error}`,
+                    code: 0
+                };
+                if (this.currentFlowId) {
+                    eventData.flowId = this.currentFlowId;
+                }
+                this.emit('onError', eventData);
             }
         };
         this.recognition.onend = () => {
@@ -148,7 +165,14 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
         this.transcriptBuffer = initialText;
         this.speechResults = [];
         // this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
-        this.emit('onKeywordDetected', { keyword: this.options?.keyword || '' });
+        const eventData = {
+            keyword: this.options?.keyword || '',
+            timestamp: Date.now()
+        };
+        if (this.currentFlowId) {
+            eventData.flowId = this.currentFlowId;
+        }
+        this.emit('onKeywordDetected', eventData);
         // Play sound notification if enabled
         if (this.options?.soundEnabled !== false) {
             this.playNotificationSound();
@@ -197,11 +221,14 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
         if (this.options?.soundEnabled !== false) {
             this.playCompletionSound();
         }
-        const result = {
+        const eventData = {
             text: finalText,
             isFinal: true
         };
-        this.emit('onRecognitionResult', result);
+        if (this.currentFlowId) {
+            eventData.flowId = this.currentFlowId;
+        }
+        this.emit('onRecognitionResult', eventData);
         this.cleanup();
     }
     playCompletionSound() {
@@ -260,6 +287,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
         }
         this.updateState(KeywordRecognizerStateEnum.IDLE);
         this.isActive = false;
+        this.currentFlowId = null;
         if (this.recognition) {
             this.recognition.stop();
         }
@@ -270,6 +298,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
         // Check browser support when actually using the module, and not building
         this.checkBrowserSupport();
         this.options = options;
+        this.currentFlowId = options.flowId || 'unknown';
         this.isActive = true;
         this.keywordDetected = false;
         this.transcriptBuffer = '';
