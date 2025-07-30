@@ -107,6 +107,7 @@ export default function FlowComponent({
     }
     
     try {
+      // Clear all previous state including errors
       setDetectedKeyword(null);
       setRecognizedSentence(null);
       setError(null);
