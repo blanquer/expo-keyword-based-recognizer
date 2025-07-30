@@ -50,7 +50,9 @@ class ExpoKeywordBasedRecognizer: NSObject {
   }
 
   private func setupSpeechRecognizer() {
+
     speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: language))
+
     if speechRecognizer?.isAvailable == false {
       // Note, when onDeviceRecognition is set to true, and it is really not available
       // the isAvailable seems to still be true, but the recognitionTask will fail
@@ -106,7 +108,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
   private func cleanupRecognition() {
 
-    // recognitionTask?.cancel() // TODO: should this be done before cleanup?
+    recognitionTask?.cancel()
 
     isListeningForKeyword = false  // TODO: might want to leave this true? ... or maybe start Listening is the one who's gonna set it
     isRecognizingSpeech = false
@@ -121,7 +123,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
     silenceTimer?.invalidate()
     recognitionRequest = nil
-    recognitionTask = nil  // If task is null it means we're not active
+    recognitionTask = nil  // If task is null it means we're not active (we have cancelled it above)
 
   }
 
