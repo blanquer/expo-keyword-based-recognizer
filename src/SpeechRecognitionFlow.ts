@@ -33,11 +33,12 @@ export class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
     await this.manager._activateFlow(this, options);
   }
 
+  // Deactivates the flow BUT it does not clean the subscriptions or unregister the flow...
   async deactivate(): Promise<void> {
     if (!this._isActive) return;
     
-    // Clean up all subscriptions
-    this.cleanupSubscriptions();
+    // // Clean up all subscriptions
+    // this.cleanupSubscriptions();
     
     // Deactivate native module
     await ExpoKeywordBasedRecognizerModule.deactivate();

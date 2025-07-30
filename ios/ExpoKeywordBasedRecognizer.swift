@@ -111,11 +111,13 @@ class ExpoKeywordBasedRecognizer: NSObject {
     isListeningForKeyword = false  // TODO: might want to leave this true? ... or maybe start Listening is the one who's gonna set it
     isRecognizingSpeech = false
     meaningfulConfirmedResults.removeAll()
-
-    if hasActiveTap {
-      audioEngine.inputNode.removeTap(onBus: 0)
-      hasActiveTap = false
-    }
+    // Not sure if we need to remove the tap here, since we are stopping the audio engine
+    // if hasActiveTap {
+    //   print("🟢 KeywordRecognizer: Removing audio tap from input node")
+    //   audioEngine.inputNode.removeTap(onBus: 0)
+    //   print("🟢 KeywordRecognizer: Removed")
+    //   hasActiveTap = false
+    // }
 
     silenceTimer?.invalidate()
     recognitionRequest = nil
@@ -296,10 +298,9 @@ class ExpoKeywordBasedRecognizer: NSObject {
       // print("🟢 PROCESSED FULL SPECH: \(fullSpeech)")
       // Notify delegate with the final result
       // Prepare the struct (RecognitionResult in JS)
-      var res = RecognitionResult(text: fullSpeech, isFinal: true)
-
+      let res = RecognitionResult(text: fullSpeech, isFinal: true)
+      recognitionRequest?.endAudio()  // End the audio request to signal completion to the recognizer
       delegate?.recognitionResult(res)
-      recognitionRequest?.endAudio()
       cleanupRecognition()
     } else {
       if result.speechRecognitionMetadata?.speechStartTimestamp != nil {
