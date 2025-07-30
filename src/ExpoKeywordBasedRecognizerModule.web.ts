@@ -61,6 +61,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
   private keywordDetected = false;
   private transcriptBuffer = '';
   private speechResults: string[] = []; // Store all speech recognition results
+  private currentFlowId: string | null = null; // Track current flow ID
 
   constructor() {
     super();
@@ -83,7 +84,13 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
 
   private updateState(newState: KeywordRecognizerStateEnum): void {
     this.currentState = newState;
-    this.emit('onStateChange', { state: newState });
+    console.log(`🟡 Web Speech: Updating state to ${newState}, flowId: ${this.currentFlowId}`);
+    
+    const eventData: any = { state: newState };
+    if (this.currentFlowId) {
+      eventData.flowId = this.currentFlowId;
+    }
+    this.emit('onStateChange', eventData);
   }
 
   private setupRecognition(): void {
@@ -101,7 +108,11 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
 
     this.recognition.onstart = () => {
       console.log('🟢 Web Speech: Recognition started');
-      this.emit('onRecognitionStart');
+      const eventData: any = {};
+      if (this.currentFlowId) {
+        eventData.flowId = this.currentFlowId;
+      }
+      this.emit('onRecognitionStart', eventData);
     };
 
     this.recognition.onresult = (event: any) => {
@@ -153,7 +164,14 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
         console.log('🔴 Web Speech: No speech detected, but we have results ')
         this.processFinalResults();
       }else{
-      this.emit('onError', new Error(`Speech recognition error: ${event.error}`));
+        const eventData: any = {
+          message: `Speech recognition error: ${event.error}`,
+          code: 0
+        };
+        if (this.currentFlowId) {
+          eventData.flowId = this.currentFlowId;
+        }
+        this.emit('onError', eventData);
       }
     };
 
@@ -209,7 +227,15 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
     this.transcriptBuffer = initialText;
     this.speechResults = [];
     // this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
-    this.emit('onKeywordDetected', { keyword: this.options?.keyword || '' });
+    
+    const eventData: any = { 
+      keyword: this.options?.keyword || '',
+      timestamp: Date.now()
+    };
+    if (this.currentFlowId) {
+      eventData.flowId = this.currentFlowId;
+    }
+    this.emit('onKeywordDetected', eventData);
     
     // Play sound notification if enabled
     if (this.options?.soundEnabled !== false) {
@@ -271,12 +297,15 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
       this.playCompletionSound();
     }
     
-    const result: RecognitionResult = {
+    const eventData: any = {
       text: finalText,
       isFinal: true
     };
+    if (this.currentFlowId) {
+      eventData.flowId = this.currentFlowId;
+    }
 
-    this.emit('onRecognitionResult', result);
+    this.emit('onRecognitionResult', eventData);
     this.cleanup();
   }
 
@@ -345,6 +374,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
     }
     this.updateState(KeywordRecognizerStateEnum.IDLE);
     this.isActive = false;
+    this.currentFlowId = null;
     
     if (this.recognition) {
       this.recognition.stop();
@@ -352,12 +382,13 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter<ExpoKeywordBasedReco
   }
 
   // Public API methods
-  async activate(options: KeywordRecognizerOptions): Promise<void> {
+  async activate(options: KeywordRecognizerOptions & { flowId?: string }): Promise<void> {
     console.log('🔴 Web Speech: Activating with options:', options);
     
     // Check browser support when actually using the module, and not building
     this.checkBrowserSupport();    
     this.options = options;
+    this.currentFlowId = options.flowId || 'unknown';
     this.isActive = true;
     this.keywordDetected = false;
     this.transcriptBuffer = '';
