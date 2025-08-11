@@ -486,10 +486,36 @@ class ExpoKeywordBasedRecognizer: NSObject {
   private func filterTranscriptText(_ transcript: String) -> String {
     guard let keyword = keyword else { return transcript }
     
-    let filtered = transcript
-      .replacingOccurrences(of: keyword, with: "", options: .caseInsensitive)
+    var filtered = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+    let keywordWords = keyword.lowercased().components(separatedBy: .whitespaces)
+    
+    print("🟡 Filtering transcript: '\(transcript)'")
+    print("🟡 Wake word components: \(keywordWords)")
+    
+    // First, try to remove the complete wake word phrase
+    filtered = filtered.replacingOccurrences(of: keyword, with: "", options: .caseInsensitive)
       .trimmingCharacters(in: .whitespacesAndNewlines)
     
+    // If we still have text, check for partial wake word at the beginning
+    if !filtered.isEmpty {
+      let filteredWords = filtered.components(separatedBy: .whitespaces)
+      var wordsToKeep = filteredWords
+      
+      // Check if the beginning of our filtered text starts with any trailing parts of the wake word
+      for keywordWord in keywordWords.reversed() { // Check from end of wake word backwards
+        if let firstWord = wordsToKeep.first,
+           firstWord.lowercased() == keywordWord.lowercased() {
+          print("🟡 Removing trailing wake word component: '\(firstWord)'")
+          wordsToKeep.removeFirst()
+        } else {
+          break // Stop if we don't find a match (preserve word order)
+        }
+      }
+      
+      filtered = wordsToKeep.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    print("🟡 Filtered result: '\(transcript)' → '\(filtered)'")
     return filtered.isEmpty ? transcript : filtered
   }
 
