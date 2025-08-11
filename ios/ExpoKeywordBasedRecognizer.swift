@@ -129,7 +129,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
   private func startAudioEngine() throws {
     let audioSession = AVAudioSession.sharedInstance()
-    try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
+      try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .allowBluetooth, AVAudioSession.CategoryOptions.allowAirPlay, .defaultToSpeaker, .duckOthers, .overrideMutedMicrophoneInterruption])
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
     let inputNode = audioEngine.inputNode
