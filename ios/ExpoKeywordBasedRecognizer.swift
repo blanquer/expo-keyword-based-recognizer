@@ -469,10 +469,18 @@ class ExpoKeywordBasedRecognizer: NSObject {
     print("🟢 KeywordRecognizer: Received result (filtered): \(filteredTranscript)")
     
     // Store meaningful filtered results (non-empty transcriptions)
-    if !filteredTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      // Store the filtered text for potential use in silence timeout scenarios
-      lastFilteredMeaningfulText = filteredTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
-      print("🟢 KeywordRecognizer: Stored meaningful filtered result: \(lastFilteredMeaningfulText ?? "")")
+    let trimmedFiltered = filteredTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !trimmedFiltered.isEmpty {
+      // Only store if this result is longer/more complete than what we have
+      let shouldStore = lastFilteredMeaningfulText == nil || 
+                       trimmedFiltered.count > (lastFilteredMeaningfulText?.count ?? 0)
+      
+      if shouldStore {
+        lastFilteredMeaningfulText = trimmedFiltered
+        print("🟢 KeywordRecognizer: Stored MORE COMPLETE filtered result: \(lastFilteredMeaningfulText ?? "")")
+      } else {
+        print("🟡 KeywordRecognizer: Keeping previous result (\(lastFilteredMeaningfulText?.count ?? 0) chars) over shorter result (\(trimmedFiltered.count) chars): '\(trimmedFiltered)'")
+      }
     }
     
     // Process the result normally but use filtered transcript
