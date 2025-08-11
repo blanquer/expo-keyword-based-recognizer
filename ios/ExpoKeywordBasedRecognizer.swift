@@ -12,6 +12,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
   private let soundEnabled: Bool
   private let soundUri: String?
   private let contextualHints: [String]
+  private let initializeAudioSession: Bool
 
   private var speechRecognizer: SFSpeechRecognizer?
   private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -33,7 +34,8 @@ class ExpoKeywordBasedRecognizer: NSObject {
     maxSilenceDuration: TimeInterval,
     soundEnabled: Bool,
     soundUri: String?,
-    contextualHints: [String]
+    contextualHints: [String],
+    initializeAudioSession: Bool = false
   ) {
 
     self.keyword = keyword?.lowercased()
@@ -42,6 +44,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
     self.soundEnabled = soundEnabled
     self.soundUri = soundUri
     self.contextualHints = contextualHints
+    self.initializeAudioSession = initializeAudioSession
 
     super.init()
 
@@ -128,9 +131,17 @@ class ExpoKeywordBasedRecognizer: NSObject {
   }
 
   private func startAudioEngine() throws {
-    let audioSession = AVAudioSession.sharedInstance()
-      try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .allowBluetooth, AVAudioSession.CategoryOptions.allowAirPlay, .defaultToSpeaker, .duckOthers, .overrideMutedMicrophoneInterruption])
-    try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+    // Only initialize the audio session if explicitly requested
+    if initializeAudioSession {
+      let audioSession = AVAudioSession.sharedInstance()
+      try audioSession.setCategory(
+        .playAndRecord, mode: .default,
+        options: [
+          .allowBluetoothA2DP, .allowBluetooth, AVAudioSession.CategoryOptions.allowAirPlay,
+          .defaultToSpeaker, .duckOthers, .overrideMutedMicrophoneInterruption,
+        ])
+      try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+    }
 
     let inputNode = audioEngine.inputNode
     let recordingFormat = inputNode.outputFormat(forBus: 0)

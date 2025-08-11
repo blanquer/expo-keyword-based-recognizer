@@ -74,6 +74,7 @@ export default function App() {
           initialKeyword="Hey Chef"
           initialKeywordEnabled={true}
           initialSilenceDelay={2000}
+          initializeAudioSession={true}
           onFlowCreated={(flow) => { mainFlowRef.current = flow; }} 
         />
 
@@ -85,6 +86,7 @@ export default function App() {
           initialKeyword=""
           initialKeywordEnabled={false}
           initialSilenceDelay={1500}
+          initializeAudioSession={true}
         />
 
       </ScrollView>

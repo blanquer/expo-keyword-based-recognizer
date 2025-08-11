@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import SpeechRecognitionManager from './index';
 import { KeywordRecognizerStateEnum } from './ExpoKeywordBasedRecognizer.types';
 export function useSpeechRecognizerFlow(options) {
-    const { flowName, initialKeyword = '', initialLanguage = 'en-US', initialSilenceDelay = 2000, initialKeywordEnabled = true, onKeywordDetected: onKeywordDetectedCallback, onRecognitionResult: onRecognitionResultCallback, onError: onErrorCallback, onTakenOver: onTakenOverCallback, onStateChange: onStateChangeCallback, } = options;
+    const { flowName, initialKeyword = '', initialLanguage = 'en-US', initialSilenceDelay = 2000, initialKeywordEnabled = true, initializeAudioSession = false, onKeywordDetected: onKeywordDetectedCallback, onRecognitionResult: onRecognitionResultCallback, onError: onErrorCallback, onTakenOver: onTakenOverCallback, onStateChange: onStateChangeCallback, } = options;
     // Flow instance
     const flowRef = useRef(null);
     // State management
@@ -82,6 +82,7 @@ export function useSpeechRecognizerFlow(options) {
                 soundEnabled: true,
                 interimResults: true,
                 contextualHints: [],
+                initializeAudioSession,
                 ...overrideOptions, // Allow override of any option
             };
             await flowRef.current.activate(activationOptions);

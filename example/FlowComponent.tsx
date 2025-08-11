@@ -15,6 +15,7 @@ interface FlowComponentProps {
   initialKeyword?: string;
   initialKeywordEnabled?: boolean;
   initialSilenceDelay?: number;
+  initializeAudioSession?: boolean;
   onFlowCreated?: (flow: SpeechRecognitionFlow) => void;
 }
 
@@ -25,6 +26,7 @@ export default function FlowComponent({
   initialKeyword = "Hey Chef",
   initialKeywordEnabled = true,
   initialSilenceDelay = 2000,
+  initializeAudioSession = false,
   onFlowCreated 
 }: FlowComponentProps) {
   const [keyword, setKeyword] = useState<string>(initialKeyword);
@@ -122,6 +124,7 @@ export default function FlowComponent({
         soundEnabled: true,
         interimResults: true,
         contextualHints: [],
+        initializeAudioSession,
         onInterrupted: () => {
           console.log(`🔴 DEBUG: ${flowName} was interrupted by another flow`);
         }

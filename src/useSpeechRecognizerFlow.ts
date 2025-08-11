@@ -16,6 +16,7 @@ export interface UseSpeechRecognizerFlowOptions {
   initialLanguage?: string;
   initialSilenceDelay?: number;
   initialKeywordEnabled?: boolean;
+  initializeAudioSession?: boolean;
   
   // Optional callbacks for side effects
   onKeywordDetected?: (keyword: string) => void;
@@ -63,6 +64,7 @@ export function useSpeechRecognizerFlow(options: UseSpeechRecognizerFlowOptions)
     initialLanguage = 'en-US',
     initialSilenceDelay = 2000,
     initialKeywordEnabled = true,
+    initializeAudioSession = false,
     onKeywordDetected: onKeywordDetectedCallback,
     onRecognitionResult: onRecognitionResultCallback,
     onError: onErrorCallback,
@@ -162,6 +164,7 @@ export function useSpeechRecognizerFlow(options: UseSpeechRecognizerFlowOptions)
         soundEnabled: true,
         interimResults: true,
         contextualHints: [],
+        initializeAudioSession,
         ...overrideOptions, // Allow override of any option
       };
       

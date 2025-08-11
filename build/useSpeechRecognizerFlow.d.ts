@@ -6,6 +6,7 @@ export interface UseSpeechRecognizerFlowOptions {
     initialLanguage?: string;
     initialSilenceDelay?: number;
     initialKeywordEnabled?: boolean;
+    initializeAudioSession?: boolean;
     onKeywordDetected?: (keyword: string) => void;
     onRecognitionResult?: (text: string) => void;
     onError?: (error: Error) => void;

@@ -28,6 +28,7 @@ export interface KeywordRecognizerOptions {
     soundEnabled?: boolean;
     interimResults?: boolean;
     contextualHints?: string[];
+    initializeAudioSession?: boolean;
 }
 export interface RecognitionResult {
     text: string;

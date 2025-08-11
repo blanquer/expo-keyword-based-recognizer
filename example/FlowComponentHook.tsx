@@ -14,6 +14,7 @@ interface FlowComponentHookProps {
   initialKeyword?: string;
   initialKeywordEnabled?: boolean;
   initialSilenceDelay?: number;
+  initializeAudioSession?: boolean;
 }
 
 export default function FlowComponentHook({ 
@@ -23,6 +24,7 @@ export default function FlowComponentHook({
   initialKeyword = "Hey Chef",
   initialKeywordEnabled = true,
   initialSilenceDelay = 2000,
+  initializeAudioSession = false,
 }: FlowComponentHookProps) {
   // Use the hook for all speech recognition functionality
   const {
@@ -55,6 +57,7 @@ export default function FlowComponentHook({
     initialLanguage,
     initialSilenceDelay,
     initialKeywordEnabled,
+    initializeAudioSession,
   });
   
   const listeningStateToComponent = (): ReactElement => {

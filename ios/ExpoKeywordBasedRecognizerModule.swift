@@ -74,6 +74,7 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     let soundUri = options["soundUri"] as? String
     let contextualHints = options["contextualHints"] as? [String] ?? []
     let flowId = options["flowId"] as? String ?? "unknown"
+    let initializeAudioSession = options["initializeAudioSession"] as? Bool ?? false
 
     // Store the current flow ID
     currentFlowId = flowId
@@ -93,7 +94,8 @@ public class ExpoKeywordBasedRecognizerModule: Module {
       maxSilenceDuration: maxSilenceDuration,
       soundEnabled: soundEnabled,
       soundUri: soundUri,
-      contextualHints: contextualHints
+      contextualHints: contextualHints,
+      initializeAudioSession: initializeAudioSession
     )
 
     print("🔴 NATIVE DEBUG: Setting delegate...")
