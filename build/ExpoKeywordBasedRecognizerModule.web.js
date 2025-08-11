@@ -101,8 +101,22 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
             }
         };
         this.recognition.onerror = (event) => {
-            console.error('🔴 Web Speech: Recognition error:', event.error);
-            console.error('🔴 Web Speech: Recognition error, existing results:', this.speechResults);
+            if (event.error === 'no-speech' && this.speechResults.length === 0) {
+                // No speech detected and no results.
+                // unless we were already after recognizing the keyword, we want to continue listening in...
+                if (this.options?.keyword && this.keywordDetected) {
+                    // If we were recognizing speech, we can consider it a no-speech event?
+                    this.processFinalResults();
+                    return;
+                }
+                else {
+                    // We need to continue listening for the keyword
+                    console.log('🟢 Web Speech: Restarting recognition since we do not even have the keyword!!!!!!!!!!!!!!!!!!');
+                    this.recognition?.abort();
+                    return;
+                }
+            }
+            console.error(`🔴 Web Speech: Recognition error: ${event.error} (results: ${this.speechResults})`);
             if (event.error === 'no-speech' && this.speechResults.length > 0) {
                 // Empty last result, but we have some speech results
                 console.log('🔴 Web Speech: No speech detected, but we have results ');
@@ -123,7 +137,6 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
             console.log(`🟡 Web Speech: Recognition ended for ${this.currentState}`, this.currentState, this.keywordDetected);
             if (this.currentState === KeywordRecognizerStateEnum.LISTENING_FOR_KEYWORD && this.keywordDetected) {
                 // pickup the fact that we just finished detecting the keyword, therefor transition to recognizing speech
-                console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
                 this.updateState(KeywordRecognizerStateEnum.RECOGNIZING_SPEECH);
                 this.startRecognition();
                 return;
@@ -133,6 +146,7 @@ class ExpoKeywordBasedRecognizerModule extends EventEmitter {
                 if (this.isActive && !this.keywordDetected) {
                     setTimeout(() => {
                         if (this.isActive) {
+                            // console.log('🟢 Web Speech: Restarting recognition for keyword detection !!!!!!!!!!!!!!!!!!!!!!!');
                             this.startRecognition();
                         }
                     }, 100);
