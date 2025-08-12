@@ -33,18 +33,16 @@ class CircularAudioBuffer {
     }
   }
 
-  func getAudioFrom(_ timestamp: CFAbsoluteTime, maxDuration: TimeInterval = 0.5)
+  func getAudioFrom(_ timestamp: CFAbsoluteTime)
     -> [AVAudioPCMBuffer]
   {
     return queue.sync { [weak self] in
       guard let self = self else { return [] }
 
       var result: [AVAudioPCMBuffer] = []
-      let currentTime = CFAbsoluteTimeGetCurrent()
-      let maxEndTime = timestamp + maxDuration  // Only get audio for maxDuration after timestamp
 
-      print("🟡 Searching for audio from \(timestamp) to \(maxEndTime) (\(maxDuration)s window)")
-      print("🟡 Available buffers: \(self.buffers.count)")
+      print("🟡 Searching for audio from \(timestamp)")
+      // print("🟡 Available buffers: \(self.buffers.count)")
 
       for (index, buffer) in self.buffers.enumerated() {
         let bufferStart = buffer.absoluteTimestamp
@@ -55,12 +53,7 @@ class CircularAudioBuffer {
           continue
         }
 
-        // Skip buffers that start after our max end time
-        if bufferStart > maxEndTime {
-          break
-        }
-
-        print("🟡 Processing buffer \(index): \(bufferStart) - \(bufferEnd)")
+        // print("🟡 Processing buffer \(index): \(bufferStart) - \(bufferEnd)")
 
         if timestamp >= bufferStart && timestamp <= bufferEnd {
           // Found the buffer containing our timestamp
@@ -74,13 +67,13 @@ class CircularAudioBuffer {
           {
             result.append(trimmedBuffer)
           }
-        } else if bufferStart >= timestamp && bufferStart < maxEndTime {
-          // This buffer starts after our timestamp but within our window
+        } else if bufferStart >= timestamp {
+          // This buffer starts after our timestamp
           result.append(buffer.audioData)
         }
       }
 
-      print("🟡 Returning \(result.count) audio buffers for replay (\(maxDuration)s window)")
+      print("🟡 Returning \(result.count) audio buffers for replay")
       return result
     }
   }
@@ -300,7 +293,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
     if recognitionPhase == .listeningForWakeWord {
       startWakeWordRecognition()
     } else {
-      startSentenceRecognition()
+      startRecognitionAfterWakeWord(from: 0)
     }
   }
 
@@ -340,34 +333,34 @@ class ExpoKeywordBasedRecognizer: NSObject {
     print("🟢 KeywordRecognizer: Wake word recognition started")
   }
 
-  private func startSentenceRecognition() {
-    guard let speechRecognizer = speechRecognizer else { return }
+  private func startOnlySentenceRecognition() {
+    // guard let speechRecognizer = speechRecognizer else { return }
 
-    print("🟢 KeywordRecognizer: Starting sentence recognition")
+    // print("🟢 KeywordRecognizer: Starting sentence recognition")
 
-    // Clean up any existing sentence recognition
-    sentenceRecognitionTask?.cancel()
+    // // Clean up any existing sentence recognition
+    // sentenceRecognitionTask?.cancel()
 
-    // Create sentence recognition request
-    let recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-    recognitionRequest.shouldReportPartialResults = true
-    recognitionRequest.requiresOnDeviceRecognition = false
-    recognitionRequest.contextualStrings = contextualHints
+    // // Create sentence recognition request
+    // let recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+    // recognitionRequest.shouldReportPartialResults = true
+    // recognitionRequest.requiresOnDeviceRecognition = false
+    // recognitionRequest.contextualStrings = contextualHints
 
-    sentenceRecognitionRequest = recognitionRequest
-    recognitionStartTime = CFAbsoluteTimeGetCurrent()
+    // sentenceRecognitionRequest = recognitionRequest
+    // recognitionStartTime = CFAbsoluteTimeGetCurrent()
 
-    // Start sentence recognition task
-    sentenceRecognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) {
-      [weak self] result, error in
-      guard let self = self else { return }
+    // // Start sentence recognition task
+    // sentenceRecognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) {
+    //   [weak self] result, error in
+    //   guard let self = self else { return }
 
-      DispatchQueue.main.async {
-        self.handleSentenceRecognitionResult(result: result, error: error)
-      }
-    }
+    //   DispatchQueue.main.async {
+    //     self.handleSentenceRecognitionResult(result: result, error: error)
+    //   }
+    // }
 
-    print("🟢 KeywordRecognizer: Sentence recognition started")
+    // print("🟢 KeywordRecognizer: Sentence recognition started")
   }
 
   private func handleWakeWordRecognitionResult(result: SFSpeechRecognitionResult?, error: Error?) {
@@ -390,42 +383,25 @@ class ExpoKeywordBasedRecognizer: NSObject {
     }
   }
 
-  private func handleSentenceRecognitionResult(result: SFSpeechRecognitionResult?, error: Error?) {
-    if let error = error {
-      // Only handle errors if we're not idle (avoid handling errors from canceled tasks)
-      if recognitionPhase != .idle {
-        delegate?.recognitionError(error)
-      }
-      return
-    }
-
-    guard let result = result else { return }
-
-    let transcript = result.bestTranscription.formattedString
-    print("🟢 KeywordRecognizer: Sentence result: \(transcript)")
-
-    // Only process sentence recognition if we're still in the right phase
-    if recognitionPhase == .recognizingSpeech {
-      processContinuousTranscription(result: result)
-    }
-  }
-
   private func checkForWakeWord(in result: SFSpeechRecognitionResult) {
     let transcript = result.bestTranscription.formattedString.lowercased()
 
     guard let keyword = keyword else {
       // No keyword specified, immediately transition to speech recognition
-      transitionToSpeechRecognition(from: result)
+      transitionToSpeechRecognition(from: 0)
       return
     }
 
     if transcript.contains(keyword) {
-      print("🟢 KeywordRecognizer: WAKE WORD DETECTED!")
-      transitionToSpeechRecognition(from: result)
+      let detectedAt = CFAbsoluteTimeGetCurrent()
+      print("🟢 KeywordRecognizer: WAKE WORD DETECTED! at \(detectedAt)")
+      // Empirically, if we don't give enough audio (i.e., about 1 sec) to the new recognizer immediately following word spoken
+      // up to now, won't be really recognized (it's best to air on recognizing more, which can include wake word, than loosing what was said)
+      transitionToSpeechRecognition(from: detectedAt - 1.0)
     }
   }
 
-  private func transitionToSpeechRecognition(from result: SFSpeechRecognitionResult) {
+  private func transitionToSpeechRecognition(from keywordDetectedAt: CFAbsoluteTime) {
     recognitionPhase = .recognizingSpeech
 
     // Play wake word detection sound
@@ -438,10 +414,10 @@ class ExpoKeywordBasedRecognizer: NSObject {
     delegate?.recognitionStarted()
 
     // Calculate wake word end time and restart recognition
-    restartRecognitionAfterWakeWord(from: result)
+    startRecognitionAfterWakeWord(from: keywordDetectedAt)
   }
 
-  private func restartRecognitionAfterWakeWord(from result: SFSpeechRecognitionResult) {
+  private func startRecognitionAfterWakeWord(from replayStartTime: CFAbsoluteTime) {
     print("🟢 KeywordRecognizer: Restarting recognition for command detection")
 
     // Cancel current recognition and clean up properly
@@ -457,7 +433,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
     lastFilteredMeaningfulText = nil
 
     // Start immediately without delay to capture any speech right after wake word
-    startCommandRecognition(from: CFAbsoluteTimeGetCurrent() - 1.0)  // Get recent audio
+    startCommandRecognition(from: replayStartTime)  // Get recent audio
   }
 
   private func startCommandRecognition(from replayStartTime: CFAbsoluteTime) {
@@ -471,12 +447,14 @@ class ExpoKeywordBasedRecognizer: NSObject {
     newRequest.requiresOnDeviceRecognition = false
     newRequest.contextualStrings = contextualHints
 
-    // Get recent audio (last 1 second) to capture any speech right after wake word
-    let replayBuffers = circularBuffer.getAudioFrom(replayStartTime, maxDuration: 1.0)
-    print("🟢 KeywordRecognizer: Retrieved \(replayBuffers.count) replay buffers (1.0s window)")
+    if replayStartTime > 0 {
+      // Get recent audio to capture any speech right after wake word
+      let replayBuffers = circularBuffer.getAudioFrom(replayStartTime)
+      print("🟢 KeywordRecognizer: Retrieved \(replayBuffers.count) replay buffers")
 
-    for buffer in replayBuffers {
-      newRequest.append(buffer)
+      for buffer in replayBuffers {
+        newRequest.append(buffer)
+      }
     }
 
     // Set as current request - audio tap will continue feeding it
@@ -500,9 +478,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
         // Only process results if we're still in speech recognition phase
         if self.recognitionPhase == .recognizingSpeech {
-          // Filter out wake word from results
-          // if let filteredResult = self.filterWakeWordFromResult(result!) {
-          self.handleFilteredRecognitionResult(result: result, error: error)
+          self.handleCommandRecognitionResult(result: result, error: error)
           // }
         }
       }
@@ -537,16 +513,15 @@ class ExpoKeywordBasedRecognizer: NSObject {
     return result
   }
 
-  private func handleFilteredRecognitionResult(result: SFSpeechRecognitionResult?, error: Error?) {
+  private func handleCommandRecognitionResult(result: SFSpeechRecognitionResult?, error: Error?) {
     guard let result = result else { return }
 
     let transcript = result.bestTranscription.formattedString
-    let filteredTranscript = transcript  // NO FILTERING TIL THE END filterTranscriptText(transcript)
 
-    print("🟢 KeywordRecognizer: >>>>>>>>>>>>>>> Received result (filtered): \(filteredTranscript)")
+    print("🟢 KeywordRecognizer: >>>>>>>>>>>>>>> Received result (filtered): \(transcript)")
 
     // Store meaningful filtered results (non-empty transcriptions)
-    let trimmedFiltered = filteredTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedFiltered = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
     if !trimmedFiltered.isEmpty {
       // Detect final-partial results (iOS 18 fix for lost text after pauses)
       let isFinalPartial = detectFinalPartialResult(result)
@@ -563,9 +538,9 @@ class ExpoKeywordBasedRecognizer: NSObject {
     // Process the result normally but use filtered transcript
     if result.isFinal {
       print("🟢 KeywordRecognizer: Final result received, processing...")
-      handleFinalSpeechResultWithText(accumulatedTranscription)
+      handleFinalCommandResult(accumulatedTranscription)
     } else {
-      handleInterimSpeechResultWithText(filteredTranscript, originalResult: result)
+      handleInterimCommandResult(transcript, originalResult: result)
     }
   }
 
@@ -605,29 +580,6 @@ class ExpoKeywordBasedRecognizer: NSObject {
     return filtered.isEmpty ? transcript : filtered
   }
 
-  private func processContinuousTranscription(result: SFSpeechRecognitionResult) {
-    print("🟢 KeywordRecognizer: Processing continuous transcription (isFinal: \(result.isFinal))")
-
-    // Detect final-partial results (iOS 18 fix for lost text after pauses)
-    let isFinalPartial = detectFinalPartialResult(result)
-
-    if isFinalPartial {
-      print("🔵 KeywordRecognizer: Detected final-partial result - saving for accumulation")
-      finalPartialResults.append(result)
-      updateAccumulatedTranscription()
-    } else {
-      print("🟡 KeywordRecognizer: Ongoing partial result - combining with saved results")
-      updateAccumulatedTranscription(withCurrentPartial: result)
-    }
-
-    // Handle final results or continue with silence detection
-    if result.isFinal {
-      handleFinalContinuousResult(result)
-    } else {
-      handleInterimContinuousResult(result)
-    }
-  }
-
   private func detectFinalPartialResult(_ result: SFSpeechRecognitionResult) -> Bool {
     // A result is "final-partial" if:
     // 1. It has segments with confidence > 0 (meaning it's confident about the transcription)
@@ -640,9 +592,9 @@ class ExpoKeywordBasedRecognizer: NSObject {
       segment.confidence > 0.5  // Use higher confidence threshold
     }
 
-    if hasConfidentSegments {
-      print("🔵 Final-partial detection: hasConfident=\(hasConfidentSegments)")
-    }
+    // if hasConfidentSegments {
+    //   print("🔵 Final-partial detection: hasConfident=\(hasConfidentSegments)")
+    // }
 
     return hasConfidentSegments
   }
@@ -681,77 +633,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
     print("🔵 KeywordRecognizer: Updated accumulated transcription: '\(accumulatedTranscription)'")
   }
 
-  private func handleFinalContinuousResult(_ result: SFSpeechRecognitionResult) {
-    print("🟢 KeywordRecognizer: Final continuous result received")
-
-    // Use accumulated transcription as the final result
-    var finalText = accumulatedTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    // If accumulated text is empty, fall back to the final result
-    if finalText.isEmpty {
-      finalText = result.bestTranscription.formattedString.trimmingCharacters(
-        in: .whitespacesAndNewlines)
-      print("🟡 KeywordRecognizer: Using final result as fallback: '\(finalText)'")
-    } else {
-      print("🟢 KeywordRecognizer: Using accumulated transcription: '\(finalText)'")
-    }
-
-    // Apply wake word filtering if needed
-    let filteredText = filterTranscriptText(finalText)
-
-    // Play completion sound
-    if soundEnabled {
-      playSound(systemSound: 1114)  // End recording sound
-    }
-
-    print("🟢 KeywordRecognizer: Final continuous speech result (filtered): \(filteredText)")
-
-    // Notify delegate with final result
-    let recognitionResult = RecognitionResult(text: filteredText, isFinal: true)
-    delegate?.recognitionResult(recognitionResult)
-
-    // Clean up and stop - don't return to wake word detection
-    cleanupRecognition()
-    recognitionPhase = .idle
-
-    print("🟢 KeywordRecognizer: Continuous speech recognition completed, stopping")
-  }
-
-  private func handleInterimContinuousResult(_ result: SFSpeechRecognitionResult) {
-    // Check if this result has speech content (not just silence)
-    let hasContent = result.speechRecognitionMetadata?.speechStartTimestamp != nil
-
-    if hasContent && !accumulatedTranscription.isEmpty {
-      // Reset silence timer for meaningful speech
-      silenceTimer?.invalidate()
-      silenceTimer = Timer.scheduledTimer(withTimeInterval: maxSilenceDuration, repeats: false) {
-        [weak self] _ in
-        self?.handleSilenceTimeout()
-      }
-    }
-  }
-
-  private func processSpeechRecognition(result: SFSpeechRecognitionResult) {
-    print("🟢 KeywordRecognizer: Processing speech result (isFinal: \(result.isFinal))")
-
-    // Store meaningful results (non-empty transcriptions)
-    let transcript = result.bestTranscription.formattedString.trimmingCharacters(
-      in: .whitespacesAndNewlines)
-    if !transcript.isEmpty {
-      lastMeaningfulResult = result
-      print("🟢 KeywordRecognizer: Stored meaningful result: \(transcript)")
-    }
-
-    if result.isFinal {
-      // Final result received
-      handleFinalSpeechResult(result)
-    } else {
-      // Interim result - start/reset silence timer
-      handleInterimSpeechResult(result)
-    }
-  }
-
-  private func handleFinalSpeechResultWithText(_ accumulatedText: String) {
+  private func handleFinalCommandResult(_ accumulatedText: String) {
     // TODO: do not attempt to filter if there's no keyword recognition?
     var keywordFiltered = filterTranscriptText(accumulatedText)
     var finalText = keywordFiltered.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -776,19 +658,21 @@ class ExpoKeywordBasedRecognizer: NSObject {
     print("🟢 KeywordRecognizer: Speech recognition completed, stopping")
   }
 
-  private func handleInterimSpeechResultWithText(
-    _ filteredText: String, originalResult: SFSpeechRecognitionResult
+  private func handleInterimCommandResult(
+    _ transcript: String, originalResult: SFSpeechRecognitionResult
   ) {
     // Check if this result has speech content (not just silence)
     let hasContent = originalResult.speechRecognitionMetadata?.speechStartTimestamp != nil
-
-    if hasContent && !filteredText.isEmpty {
+    print("🟡 KeywordRecognizer: Interim command result has content: \(hasContent)")
+    print(
+      "🟡 KeywordRecognizer: Interim command original : \(originalResult.bestTranscription.formattedString)"
+    )
+    print(
+      "🟡 KeywordRecognizer: Interim command transcript : \(transcript)"
+    )
+    if hasContent && !transcript.isEmpty {
       // Reset silence timer for meaningful speech
-      silenceTimer?.invalidate()
-      silenceTimer = Timer.scheduledTimer(withTimeInterval: maxSilenceDuration, repeats: false) {
-        [weak self] _ in
-        self?.handleSilenceTimeout()
-      }
+      resetSilenceTimer()
     }
   }
 
@@ -823,17 +707,14 @@ class ExpoKeywordBasedRecognizer: NSObject {
     print("🟢 KeywordRecognizer: Speech recognition completed, stopping")
   }
 
-  private func handleInterimSpeechResult(_ result: SFSpeechRecognitionResult) {
-    // Check if this result has speech content (not just silence)
-    let hasContent = result.speechRecognitionMetadata?.speechStartTimestamp != nil
-
-    if hasContent {
-      // Reset silence timer for meaningful speech
-      silenceTimer?.invalidate()
-      silenceTimer = Timer.scheduledTimer(withTimeInterval: maxSilenceDuration, repeats: false) {
-        [weak self] _ in
-        self?.handleSilenceTimeout()
-      }
+  private func resetSilenceTimer() {
+    silenceTimer?.invalidate()
+    print(
+      "🟡 KeywordRecognizer: ++++++++++++++++++++++++++++++++++++++++++++++ Resetting silence timer for",
+      maxSilenceDuration)
+    silenceTimer = Timer.scheduledTimer(withTimeInterval: maxSilenceDuration, repeats: false) {
+      [weak self] _ in
+      self?.handleSilenceTimeout()
     }
   }
 
