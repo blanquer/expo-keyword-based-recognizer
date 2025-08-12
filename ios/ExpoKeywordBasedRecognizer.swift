@@ -151,6 +151,10 @@ class ExpoKeywordBasedRecognizer: NSObject {
   private var lastMeaningfulResult: SFSpeechRecognitionResult?
   private var lastFilteredMeaningfulText: String?
 
+  // Final-partial results accumulation for continuous transcription (iOS 18 fix)
+  private var finalPartialResults: [SFSpeechRecognitionResult] = []
+  private var accumulatedTranscription = ""
+
   init(
     keyword: String?,
     language: String,
@@ -240,6 +244,11 @@ class ExpoKeywordBasedRecognizer: NSObject {
     speechResults.removeAll()
     lastMeaningfulResult = nil
     lastFilteredMeaningfulText = nil
+
+    // Clean up final-partial results
+    finalPartialResults.removeAll()
+    accumulatedTranscription = ""
+
     recognitionPhase = .idle
   }
 
@@ -392,12 +401,12 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
     guard let result = result else { return }
 
-    let transcript = result.bestTranscription.formattedString.lowercased()
+    let transcript = result.bestTranscription.formattedString
     print("🟢 KeywordRecognizer: Sentence result: \(transcript)")
 
     // Only process sentence recognition if we're still in the right phase
     if recognitionPhase == .recognizingSpeech {
-      processSpeechRecognition(result: result)
+      processContinuousTranscription(result: result)
     }
   }
 
@@ -491,7 +500,6 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
         // Only process results if we're still in speech recognition phase
         if self.recognitionPhase == .recognizingSpeech {
-          self.printIncomingSegments(result: result)
           // Filter out wake word from results
           // if let filteredResult = self.filterWakeWordFromResult(result!) {
           self.handleFilteredRecognitionResult(result: result, error: error)
@@ -503,14 +511,6 @@ class ExpoKeywordBasedRecognizer: NSObject {
     print("🟢 KeywordRecognizer: Command recognition started successfully with replay")
   }
 
-  private func printIncomingSegments(result: SFSpeechRecognitionResult?) {
-    guard let result = result else { return }
-
-    let segments: [SFTranscriptionSegment] = result.bestTranscription.segments
-    for segment in segments {
-      print("🟢 KeywordRecognizer: Incoming segment: \(segment)")
-    }
-  }
   private func filterWakeWordFromResult(_ result: SFSpeechRecognitionResult)
     -> SFSpeechRecognitionResult?
   {
@@ -541,33 +541,29 @@ class ExpoKeywordBasedRecognizer: NSObject {
     guard let result = result else { return }
 
     let transcript = result.bestTranscription.formattedString
-    let filteredTranscript = filterTranscriptText(transcript)
+    let filteredTranscript = transcript  // NO FILTERING TIL THE END filterTranscriptText(transcript)
 
     print("🟢 KeywordRecognizer: >>>>>>>>>>>>>>> Received result (filtered): \(filteredTranscript)")
 
     // Store meaningful filtered results (non-empty transcriptions)
     let trimmedFiltered = filteredTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
     if !trimmedFiltered.isEmpty {
-      // Only store if this result is longer/more complete than what we have
-      let shouldStore =
-        lastFilteredMeaningfulText == nil
-        || trimmedFiltered.count > (lastFilteredMeaningfulText?.count ?? 0)
-
-      if shouldStore {
-        lastFilteredMeaningfulText = trimmedFiltered
-        print(
-          "🟢 KeywordRecognizer: Stored MORE COMPLETE filtered result: \(lastFilteredMeaningfulText ?? "")"
-        )
+      // Detect final-partial results (iOS 18 fix for lost text after pauses)
+      let isFinalPartial = detectFinalPartialResult(result)
+      if isFinalPartial {
+        print("🔵 KeywordRecognizer: Detected final-partial result - saving for accumulation")
+        finalPartialResults.append(result)
+        updateAccumulatedTranscription()
       } else {
-        print(
-          "🟡 KeywordRecognizer: Keeping previous result (\(lastFilteredMeaningfulText?.count ?? 0) chars) over shorter result (\(trimmedFiltered.count) chars): '\(trimmedFiltered)'"
-        )
+        print("🟡 KeywordRecognizer: Ongoing partial result - combining with saved results")
+        updateAccumulatedTranscription(withCurrentPartial: result)
       }
     }
 
     // Process the result normally but use filtered transcript
     if result.isFinal {
-      handleFinalSpeechResultWithText(filteredTranscript)
+      print("🟢 KeywordRecognizer: Final result received, processing...")
+      handleFinalSpeechResultWithText(accumulatedTranscription)
     } else {
       handleInterimSpeechResultWithText(filteredTranscript, originalResult: result)
     }
@@ -606,8 +602,133 @@ class ExpoKeywordBasedRecognizer: NSObject {
       filtered = wordsToKeep.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    print("🟡 Filtered result: '\(transcript)' → '\(filtered)'")
     return filtered.isEmpty ? transcript : filtered
+  }
+
+  private func processContinuousTranscription(result: SFSpeechRecognitionResult) {
+    print("🟢 KeywordRecognizer: Processing continuous transcription (isFinal: \(result.isFinal))")
+
+    // Detect final-partial results (iOS 18 fix for lost text after pauses)
+    let isFinalPartial = detectFinalPartialResult(result)
+
+    if isFinalPartial {
+      print("🔵 KeywordRecognizer: Detected final-partial result - saving for accumulation")
+      finalPartialResults.append(result)
+      updateAccumulatedTranscription()
+    } else {
+      print("🟡 KeywordRecognizer: Ongoing partial result - combining with saved results")
+      updateAccumulatedTranscription(withCurrentPartial: result)
+    }
+
+    // Handle final results or continue with silence detection
+    if result.isFinal {
+      handleFinalContinuousResult(result)
+    } else {
+      handleInterimContinuousResult(result)
+    }
+  }
+
+  private func detectFinalPartialResult(_ result: SFSpeechRecognitionResult) -> Bool {
+    // A result is "final-partial" if:
+    // 1. It has segments with confidence > 0 (meaning it's confident about the transcription)
+    // 2. But it's not marked as final (isFinal = false)
+    // 3. This indicates a pause where the framework is confident but still listening
+
+    guard !result.isFinal else { return false }
+
+    let hasConfidentSegments = result.bestTranscription.segments.contains { segment in
+      segment.confidence > 0.5  // Use higher confidence threshold
+    }
+
+    if hasConfidentSegments {
+      print("🔵 Final-partial detection: hasConfident=\(hasConfidentSegments)")
+    }
+
+    return hasConfidentSegments
+  }
+
+  private func updateAccumulatedTranscription(
+    withCurrentPartial current: SFSpeechRecognitionResult? = nil
+  ) {
+    // Sort final-partial results by speech start timestamp to maintain order
+    let sortedFinalResults = finalPartialResults.sorted { result1, result2 in
+      let timestamp1 = result1.speechRecognitionMetadata?.speechStartTimestamp ?? 0
+      let timestamp2 = result2.speechRecognitionMetadata?.speechStartTimestamp ?? 0
+      return timestamp1 < timestamp2
+    }
+
+    // Build accumulated text from final-partial results
+    var accumulatedText =
+      sortedFinalResults
+      .map { $0.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .joined(separator: " ")
+
+    // Add current partial if provided
+    if let current = current {
+      let currentText = current.bestTranscription.formattedString.trimmingCharacters(
+        in: .whitespacesAndNewlines)
+      if !currentText.isEmpty {
+        if !accumulatedText.isEmpty {
+          accumulatedText += " " + currentText
+        } else {
+          accumulatedText = currentText
+        }
+      }
+    }
+
+    accumulatedTranscription = accumulatedText
+    print("🔵 KeywordRecognizer: Updated accumulated transcription: '\(accumulatedTranscription)'")
+  }
+
+  private func handleFinalContinuousResult(_ result: SFSpeechRecognitionResult) {
+    print("🟢 KeywordRecognizer: Final continuous result received")
+
+    // Use accumulated transcription as the final result
+    var finalText = accumulatedTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // If accumulated text is empty, fall back to the final result
+    if finalText.isEmpty {
+      finalText = result.bestTranscription.formattedString.trimmingCharacters(
+        in: .whitespacesAndNewlines)
+      print("🟡 KeywordRecognizer: Using final result as fallback: '\(finalText)'")
+    } else {
+      print("🟢 KeywordRecognizer: Using accumulated transcription: '\(finalText)'")
+    }
+
+    // Apply wake word filtering if needed
+    let filteredText = filterTranscriptText(finalText)
+
+    // Play completion sound
+    if soundEnabled {
+      playSound(systemSound: 1114)  // End recording sound
+    }
+
+    print("🟢 KeywordRecognizer: Final continuous speech result (filtered): \(filteredText)")
+
+    // Notify delegate with final result
+    let recognitionResult = RecognitionResult(text: filteredText, isFinal: true)
+    delegate?.recognitionResult(recognitionResult)
+
+    // Clean up and stop - don't return to wake word detection
+    cleanupRecognition()
+    recognitionPhase = .idle
+
+    print("🟢 KeywordRecognizer: Continuous speech recognition completed, stopping")
+  }
+
+  private func handleInterimContinuousResult(_ result: SFSpeechRecognitionResult) {
+    // Check if this result has speech content (not just silence)
+    let hasContent = result.speechRecognitionMetadata?.speechStartTimestamp != nil
+
+    if hasContent && !accumulatedTranscription.isEmpty {
+      // Reset silence timer for meaningful speech
+      silenceTimer?.invalidate()
+      silenceTimer = Timer.scheduledTimer(withTimeInterval: maxSilenceDuration, repeats: false) {
+        [weak self] _ in
+        self?.handleSilenceTimeout()
+      }
+    }
   }
 
   private func processSpeechRecognition(result: SFSpeechRecognitionResult) {
@@ -630,16 +751,10 @@ class ExpoKeywordBasedRecognizer: NSObject {
     }
   }
 
-  private func handleFinalSpeechResultWithText(_ filteredText: String) {
-    var finalText = filteredText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    // If final result is empty but we have a meaningful filtered result, use that
-    if finalText.isEmpty, let lastFiltered = lastFilteredMeaningfulText {
-      finalText = lastFiltered
-      print(
-        "🟡 KeywordRecognizer: Using last meaningful filtered result instead of empty final: \(finalText)"
-      )
-    }
+  private func handleFinalSpeechResultWithText(_ accumulatedText: String) {
+    // TODO: do not attempt to filter if there's no keyword recognition?
+    var keywordFiltered = filterTranscriptText(accumulatedText)
+    var finalText = keywordFiltered.trimmingCharacters(in: .whitespacesAndNewlines)
 
     // Play completion sound
     if soundEnabled {
