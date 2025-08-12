@@ -146,8 +146,8 @@ public class ExpoKeywordBasedRecognizerModule: Module {
   private func updateState(_ newState: RecognizerState) {
     // print("🟡 NATIVE DEBUG: updateState called - changing from \(state.rawValue) to \(newState.rawValue)")
     state = newState
-    print("🟡 NATIVE DEBUG: Sending stateChange event to JavaScript...", newState.rawValue)
-    print("🟡 NATIVE DEBUG: currentFlowId: \(String(describing: currentFlowId))")
+    // print("🟡 NATIVE DEBUG: Sending stateChange event to JavaScript...", newState.rawValue)
+    // print("🟡 NATIVE DEBUG: currentFlowId: \(String(describing: currentFlowId))")
     var eventData: [String: Any] = ["state": newState.rawValue]
     if let flowId = currentFlowId {
       eventData["flowId"] = flowId
@@ -175,7 +175,7 @@ public class ExpoKeywordBasedRecognizerModule: Module {
 extension ExpoKeywordBasedRecognizerModule: ExpoKeywordBasedRecognizerDelegate {
   func keywordDetected(keyword: String) {
     updateState(.recognizingSpeech)
-    print("🟢 NATIVE DEBUG: ----------------------------------------Keyword detected: '\(keyword)'")
+    // print("🟢 NATIVE DEBUG: ----------------------------------------Keyword detected: '\(keyword)'")
 
     var eventData: [String: Any] = [
       "keyword": keyword,
@@ -196,7 +196,7 @@ extension ExpoKeywordBasedRecognizerModule: ExpoKeywordBasedRecognizerDelegate {
   }
 
   func recognitionResult(_ result: RecognitionResult) {
-    print("🟢 NATIVE DEBUG: Setting to idle...")
+    // print("🟢 NATIVE DEBUG: Setting to idle...")
     updateState(.idle)
 
     var eventData: [String: Any] = [

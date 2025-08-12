@@ -85,7 +85,7 @@ export default function App() {
           initialLanguage="es-ES"
           initialKeyword=""
           initialKeywordEnabled={false}
-          initialSilenceDelay={1500}
+          initialSilenceDelay={2000}
           initializeAudioSession={true}
         />
 
