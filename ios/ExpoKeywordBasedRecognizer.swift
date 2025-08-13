@@ -131,6 +131,8 @@ class ExpoKeywordBasedRecognizer: NSObject {
   private var sentenceRecognitionTask: SFSpeechRecognitionTask?
   private let audioEngine = AVAudioEngine()
   private var audioPlayer: AVAudioPlayer?
+  private var debugPlayerNode: AVAudioPlayerNode?
+  private var debugAudioEngine: AVAudioEngine?
 
   // Enhanced wake word detection components
   private let circularBuffer = CircularAudioBuffer()
@@ -317,7 +319,6 @@ class ExpoKeywordBasedRecognizer: NSObject {
     }
 
     wakeWordRecognitionRequest = recognitionRequest
-    // recognitionStartTime = CFAbsoluteTimeGetCurrent()
 
     // Start wake word recognition task
     wakeWordRecognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) {
@@ -367,8 +368,11 @@ class ExpoKeywordBasedRecognizer: NSObject {
         playSound(systemSound: 1113)  // Begin recording sound
       }
       // Empirically, if we don't give enough audio (i.e., about 1 sec) to the new recognizer immediately following word spoken
-      // up to now, won't be really recognized (it's best to air on recognizing more, which can include wake word, than loosing what was said)
-      transitionToSpeechRecognition(from: detectedAt - 1.0)
+      // up to now, won't be really recognized, but if we give too much, it will pickup a good amount of the wake word, which could mean
+      // we're gonna detect some text in the speech (where there was not). So it is best to air at recognizing less while still giving a chance
+      // for the possible trailing audio to be appended to the live one (i.e., if the user says something extremely fast after the wake word
+      // that beggining might be lost...but that's fine, because just a tiny silence of about 200ms would do the trick)
+      transitionToSpeechRecognition(from: detectedAt - 0.5)
     }
   }
 
@@ -402,6 +406,64 @@ class ExpoKeywordBasedRecognizer: NSObject {
     startCommandRecognition(from: replayStartTime)  // Get recent audio
   }
 
+  private func playAudioBuffers(_ buffers: [AVAudioPCMBuffer]) {
+    guard !buffers.isEmpty else {
+      print("🔇 KeywordRecognizer: No buffers to play")
+      return
+    }
+
+    // Get the format from the first buffer
+    guard let format = buffers.first?.format else { return }
+
+    // Create a separate audio engine for playback to avoid conflicts with recording
+    if debugAudioEngine == nil {
+      debugAudioEngine = AVAudioEngine()
+    }
+
+    guard let playbackEngine = debugAudioEngine else { return }
+
+    // Stop and reset if it was running
+    if playbackEngine.isRunning {
+      playbackEngine.stop()
+    }
+
+    // Remove old player node if exists
+    if let existingNode = debugPlayerNode {
+      playbackEngine.detach(existingNode)
+    }
+
+    // Create new player node
+    let playerNode = AVAudioPlayerNode()
+    debugPlayerNode = playerNode
+
+    // Attach and connect the player node to the playback engine
+    playbackEngine.attach(playerNode)
+    playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: format)
+
+    do {
+      // Start the playback engine
+      try playbackEngine.start()
+
+      // Schedule all buffers BEFORE calling play
+      var totalFrames: AVAudioFrameCount = 0
+      for buffer in buffers {
+        playerNode.scheduleBuffer(buffer, completionHandler: nil)
+        totalFrames += buffer.frameLength
+      }
+
+      let duration = Double(totalFrames) / format.sampleRate
+      print(
+        "🔊 KeywordRecognizer: Playing \(buffers.count) buffers, total duration: \(String(format: "%.2f", duration))s"
+      )
+
+      // Start playback after engine is running and buffers are scheduled
+      playerNode.play()
+
+    } catch {
+      print("🔴 KeywordRecognizer: Failed to start playback audio engine: \(error)")
+    }
+  }
+
   private func startCommandRecognition(from replayStartTime: CFAbsoluteTime) {
     // self.commandRecognitionStartedAt = CFAbsoluteTimeGetCurrent()
     guard let speechRecognizer = speechRecognizer else { return }
@@ -417,6 +479,10 @@ class ExpoKeywordBasedRecognizer: NSObject {
     if replayStartTime > 0 {
       // Get recent audio to capture any speech right after wake word
       let replayBuffers = circularBuffer.getAudioFrom(replayStartTime)
+
+      // Play the audio buffers for debugging
+      // let pcmBuffers = circularBuffer.getAudioFrom(replayStartTime)
+      // playAudioBuffers(pcmBuffers)
 
       for buffer in replayBuffers {
         newRequest.append(buffer)
@@ -634,13 +700,13 @@ class ExpoKeywordBasedRecognizer: NSObject {
   }
 
   private func resetSilenceTimer() {
-    let quickCommandSilenceThreshold = 4.0
+    let quickCommandSilenceThreshold = 3.0
     var dynamicTimerInterval = self.maxSilenceDuration
     let recognitionStartedAgo = CFAbsoluteTimeGetCurrent() - self.commandRecognitionStartedAt
     if recognitionStartedAgo < quickCommandSilenceThreshold {
       // If the current time is more than X seconds (i.e., 4 or 5 ) since the command recognition started
       // the timer length should be quick (but never the maxSilenceDuration, if that's what the caller wants)
-      dynamicTimerInterval = min(1.0, self.maxSilenceDuration)
+      dynamicTimerInterval = min(1.2, self.maxSilenceDuration)
     }
     self.commandSilenceTimer?.invalidate()
     // print(
