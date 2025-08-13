@@ -158,7 +158,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
     soundEnabled: Bool,
     soundUri: String?,
     contextualHints: [String],
-    initializeAudioSession: Bool = false
+    initializeAudioSession: Bool = true
   ) {
 
     self.keyword = keyword?.lowercased()
