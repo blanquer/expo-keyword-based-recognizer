@@ -13,6 +13,8 @@ export declare const ExpoKeywordBasedRecognizer: {
     deactivate(): Promise<void>;
     requestPermissionsAsync(): Promise<import("./ExpoKeywordBasedRecognizer.types").PermissionResponse>;
     getAvailableLanguages(): Promise<import("./ExpoKeywordBasedRecognizer.types").Language[]>;
+    playKeywordSound(): Promise<void>;
+    playSentenceSound(): Promise<void>;
     ViewPrototypes?: {
         [viewName: string]: object;
     };

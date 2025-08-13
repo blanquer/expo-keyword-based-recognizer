@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import SpeechRecognitionManager from './index';
+import ExpoKeywordBasedRecognizerModule from './ExpoKeywordBasedRecognizerModule';
 import { 
   SpeechRecognitionFlow,
   FlowActivationOptions
@@ -52,6 +53,8 @@ export interface UseSpeechRecognizerFlowReturn {
   startListening: (options?: Partial<FlowActivationOptions>) => Promise<void>;
   stopListening: () => Promise<void>;
   clearResults: () => void; // Clears detectedKeyword, recognizedText, error
+  playKeywordSound: () => Promise<void>;
+  playSentenceSound: () => Promise<void>;
   
   // Flow instance (for advanced use cases)
   flow: SpeechRecognitionFlow | null;
@@ -198,6 +201,24 @@ export function useSpeechRecognizerFlow(options: UseSpeechRecognizerFlowOptions)
     setTakenOverBy(null);
   }, []);
   
+  const playKeywordSound = useCallback(async () => {
+    try {
+      await ExpoKeywordBasedRecognizerModule.playKeywordSound();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error('Failed to play keyword sound:', error);
+    }
+  }, []);
+  
+  const playSentenceSound = useCallback(async () => {
+    try {
+      await ExpoKeywordBasedRecognizerModule.playSentenceSound();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error('Failed to play sentence sound:', error);
+    }
+  }, []);
+  
   return {
     // State
     state,
@@ -224,6 +245,8 @@ export function useSpeechRecognizerFlow(options: UseSpeechRecognizerFlowOptions)
     startListening,
     stopListening,
     clearResults,
+    playKeywordSound,
+    playSentenceSound,
     
     // Flow instance
     flow: flowRef.current,

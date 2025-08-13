@@ -25,6 +25,10 @@ export interface SpeechRecognitionFlow {
   onTakenOver(callback: (newFlowId: string) => void): () => void;
   
   getOptions(): FlowActivationOptions | null;
+  
+  // Sound playback methods
+  playKeywordSound(): Promise<void>;
+  playSentenceSound(): Promise<void>;
 }
 
 export interface SpeechRecognitionManager {

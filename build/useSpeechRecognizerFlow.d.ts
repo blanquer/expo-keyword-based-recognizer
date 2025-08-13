@@ -32,6 +32,8 @@ export interface UseSpeechRecognizerFlowReturn {
     startListening: (options?: Partial<FlowActivationOptions>) => Promise<void>;
     stopListening: () => Promise<void>;
     clearResults: () => void;
+    playKeywordSound: () => Promise<void>;
+    playSentenceSound: () => Promise<void>;
     flow: SpeechRecognitionFlow | null;
 }
 export declare function useSpeechRecognizerFlow(options: UseSpeechRecognizerFlowOptions): UseSpeechRecognizerFlowReturn;

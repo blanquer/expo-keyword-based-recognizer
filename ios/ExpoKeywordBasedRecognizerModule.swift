@@ -62,6 +62,14 @@ public class ExpoKeywordBasedRecognizerModule: Module {
     AsyncFunction("getAvailableLanguages") {
       return self.getAvailableLanguages()
     }
+    
+    AsyncFunction("playKeywordSound") {
+      self.recognizer?.playKeywordSound()
+    }
+    
+    AsyncFunction("playSentenceSound") {
+      self.recognizer?.playSentenceSound()
+    }
   }
 
   private func activate(options: [String: Any]) async throws {

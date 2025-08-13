@@ -19,5 +19,7 @@ export declare class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
     _setActive(active: boolean): void;
     _setOptions(options: FlowActivationOptions | null): void;
     _notifyTakenOver(newFlowId: string): void;
+    playKeywordSound(): Promise<void>;
+    playSentenceSound(): Promise<void>;
 }
 //# sourceMappingURL=SpeechRecognitionFlow.d.ts.map

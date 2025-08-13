@@ -51,6 +51,8 @@ export default function FlowComponentHook({
     // Actions
     startListening,
     stopListening,
+    playKeywordSound,
+    playSentenceSound,
   } = useSpeechRecognizerFlow({
     flowName,
     initialKeyword,
@@ -201,6 +203,27 @@ export default function FlowComponentHook({
           </View>
         )}
       </Group>
+      
+      {/* Sound Test Buttons */}
+      <Group name="Sound Tests" compact>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity 
+            style={[styles.soundButton, { flex: 1 }]} 
+            onPress={() => playKeywordSound()}
+          >
+            <Ionicons name="play-circle" size={20} color="#007AFF" />
+            <Text style={styles.soundButtonText}>Keyword Sound</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.soundButton, { flex: 1 }]} 
+            onPress={() => playSentenceSound()}
+          >
+            <Ionicons name="stop-circle" size={20} color="#007AFF" />
+            <Text style={styles.soundButtonText}>Sentence Sound</Text>
+          </TouchableOpacity>
+        </View>
+      </Group>
     </View>
   );
 }
@@ -291,5 +314,22 @@ const styles = {
   inputDisabled: {
     backgroundColor: '#e0e0e0',
     color: '#666',
+  },
+  soundButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(0,122,255,0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,122,255,0.2)',
+  },
+  soundButtonText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#007AFF',
   },
 };

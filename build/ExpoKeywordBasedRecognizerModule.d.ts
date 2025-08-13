@@ -5,6 +5,8 @@ declare class ExpoKeywordBasedRecognizerModule extends NativeModule<ExpoKeywordB
     deactivate(): Promise<void>;
     requestPermissionsAsync(): Promise<PermissionResponse>;
     getAvailableLanguages(): Promise<Language[]>;
+    playKeywordSound(): Promise<void>;
+    playSentenceSound(): Promise<void>;
 }
 declare const _default: ExpoKeywordBasedRecognizerModule;
 export default _default;

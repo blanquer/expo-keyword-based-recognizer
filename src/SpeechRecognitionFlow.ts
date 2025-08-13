@@ -83,4 +83,13 @@ export class SpeechRecognitionFlow implements ISpeechRecognitionFlow {
   _notifyTakenOver(newFlowId: string): void {
     this.takenOverCallbacks.forEach(callback => callback(newFlowId));
   }
+  
+  // Sound playback methods
+  async playKeywordSound(): Promise<void> {
+    await ExpoKeywordBasedRecognizerModule.playKeywordSound();
+  }
+  
+  async playSentenceSound(): Promise<void> {
+    await ExpoKeywordBasedRecognizerModule.playSentenceSound();
+  }
 }

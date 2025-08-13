@@ -13,6 +13,8 @@ export interface SpeechRecognitionFlow {
     onError(callback: (error: Error) => void): () => void;
     onTakenOver(callback: (newFlowId: string) => void): () => void;
     getOptions(): FlowActivationOptions | null;
+    playKeywordSound(): Promise<void>;
+    playSentenceSound(): Promise<void>;
 }
 export interface SpeechRecognitionManager {
     registerFlow(flowId: string): SpeechRecognitionFlow;

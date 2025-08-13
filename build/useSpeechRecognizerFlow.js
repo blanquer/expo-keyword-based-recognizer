@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import SpeechRecognitionManager from './index';
+import ExpoKeywordBasedRecognizerModule from './ExpoKeywordBasedRecognizerModule';
 import { KeywordRecognizerStateEnum } from './ExpoKeywordBasedRecognizer.types';
 export function useSpeechRecognizerFlow(options) {
     const { flowName, initialKeyword = '', initialLanguage = 'en-US', initialSilenceDelay = 2000, initialKeywordEnabled = true, initializeAudioSession = false, onKeywordDetected: onKeywordDetectedCallback, onRecognitionResult: onRecognitionResultCallback, onError: onErrorCallback, onTakenOver: onTakenOverCallback, onStateChange: onStateChangeCallback, } = options;
@@ -113,6 +114,24 @@ export function useSpeechRecognizerFlow(options) {
         setError(null);
         setTakenOverBy(null);
     }, []);
+    const playKeywordSound = useCallback(async () => {
+        try {
+            await ExpoKeywordBasedRecognizerModule.playKeywordSound();
+        }
+        catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            console.error('Failed to play keyword sound:', error);
+        }
+    }, []);
+    const playSentenceSound = useCallback(async () => {
+        try {
+            await ExpoKeywordBasedRecognizerModule.playSentenceSound();
+        }
+        catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            console.error('Failed to play sentence sound:', error);
+        }
+    }, []);
     return {
         // State
         state,
@@ -136,6 +155,8 @@ export function useSpeechRecognizerFlow(options) {
         startListening,
         stopListening,
         clearResults,
+        playKeywordSound,
+        playSentenceSound,
         // Flow instance
         flow: flowRef.current,
     };

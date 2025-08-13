@@ -16,6 +16,10 @@ declare class ExpoKeywordBasedRecognizerModule extends NativeModule<ExpoKeywordB
 
   // Language methods
   getAvailableLanguages(): Promise<Language[]>;
+  
+  // Sound playback methods
+  playKeywordSound(): Promise<void>;
+  playSentenceSound(): Promise<void>;
 
   // // Event listeners
   // addListener<T extends keyof KeywordBasedRecognizerNativeEventMap>(

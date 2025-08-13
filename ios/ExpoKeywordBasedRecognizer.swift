@@ -365,7 +365,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
       print("🟢 KeywordRecognizer: WAKE WORD DETECTED! at \(detectedAt)")
       // Play wake word detection sound
       if soundEnabled {
-        playSound(systemSound: 1113)  // Begin recording sound
+        self.playKeywordSound()  // Begin recording sound
       }
       // Empirically, if we don't give enough audio (i.e., about 1 sec) to the new recognizer immediately following word spoken
       // up to now, won't be really recognized, but if we give too much, it will pickup a good amount of the wake word, which could mean
@@ -637,7 +637,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
     // Play completion sound
     if soundEnabled {
-      playSound(systemSound: 1114)  // End recording sound
+      self.playSentenceSound()
     }
     print("🟢 KeywordRecognizer: Final speech result (filtered): \(finalText)")
 
@@ -682,7 +682,7 @@ class ExpoKeywordBasedRecognizer: NSObject {
 
     // Play completion sound
     if soundEnabled {
-      playSound(systemSound: 1114)  // End recording sound
+      self.playSentenceSound()
     }
     print("🟢 KeywordRecognizer: Final speech result: \(finalText)")
 
@@ -735,6 +735,15 @@ class ExpoKeywordBasedRecognizer: NSObject {
     } else {
       AudioServicesPlaySystemSound(systemSound)
     }
+  }
+
+  // Public methods for playing sounds from JavaScript
+  func playKeywordSound() {
+    playSound(systemSound: 1113)  // Begin recording sound
+  }
+
+  func playSentenceSound() {
+    playSound(systemSound: 1114)  // End recording sound
   }
 }
 

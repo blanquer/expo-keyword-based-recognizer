@@ -56,5 +56,12 @@ export class SpeechRecognitionFlow {
     _notifyTakenOver(newFlowId) {
         this.takenOverCallbacks.forEach(callback => callback(newFlowId));
     }
+    // Sound playback methods
+    async playKeywordSound() {
+        await ExpoKeywordBasedRecognizerModule.playKeywordSound();
+    }
+    async playSentenceSound() {
+        await ExpoKeywordBasedRecognizerModule.playSentenceSound();
+    }
 }
 //# sourceMappingURL=SpeechRecognitionFlow.js.map
